@@ -6,8 +6,8 @@ the maths question. Every attempt earns coins — right *or* wrong.
 
 - **14 worlds × 10 stages = 140 stages**, two worlds per grade band, boss castle
   at stage 10 of every world.
-- **Zero dependencies, zero build step.** The repo *is* the deployable artifact:
-  `aws s3 sync` and you are live.
+- **Zero dependencies, zero build step.** The repo *is* the deployable artifact —
+  push to GitHub Pages, or `aws s3 sync` to S3 + CloudFront.
 - **All assets generated at runtime** — every monster, prop and sound effect is
   drawn or synthesised in code. No image or audio files ship at all.
 - Desktop and mobile, portrait and landscape, installable as a PWA.
@@ -170,14 +170,58 @@ buttons would have to reinvent badly.
 
 ---
 
-## Deploying to S3 + CloudFront
+## Deploying
+
+The game is plain static files with no build step, so any static host works.
+Two are set up here.
+
+### Option A — GitHub Pages (nothing to install)
+
+`.github/workflows/pages.yml` publishes on every push to `main`.
+
+**One-time setup:** repo **Settings → Pages → Build and deployment → Source:
+GitHub Actions**. That is the only manual step; the workflow does the rest.
+
+The site lands at `https://<user>.github.io/mathisfun/`.
+
+The workflow has three jobs:
+
+| Job | Blocks the deploy? | What it does |
+| --- | --- | --- |
+| `audit` | **Yes** | Runs the curriculum audit. Shipping broken maths is the one unacceptable outcome, and this check is fast and deterministic. |
+| `browser` | No | Runs the Playwright suite and uploads screenshots as an artifact. Timing-sensitive, so a flaky runner never blocks publishing. |
+| `deploy` | — | Copies the game into `_site` — excluding `tools/`, `deploy.sh` and the docs — and publishes it. |
+
+**Why the subpath works.** A GitHub *project* site is served from
+`/<repo>/`, not the domain root. Every path in the game is already relative
+(`css/style.css`, `js/main.js`, `manifest.webmanifest`, and
+`navigator.serviceWorker.register('sw.js')`), and `sw.js` precaches `'./…'`
+entries, so the service worker registers with `/<repo>/` scope and offline play
+works unchanged. This is verified, not assumed — run the suite against a
+subpath yourself:
+
+```bash
+mkdir -p /tmp/pages/mathisfun
+rsync -a --exclude '.git' --exclude 'tools' --exclude 'deploy*' . /tmp/pages/mathisfun/
+(cd /tmp/pages && python3 -m http.server 8101 &)
+cd tools/e2e && BASE=http://localhost:8101/mathisfun node run.mjs
+```
+
+`.nojekyll` is committed so Pages serves the files as-is instead of running them
+through Jekyll.
+
+If you would rather skip Actions entirely, **Settings → Pages → Deploy from a
+branch → `main` / `root`** also works — it just publishes `tools/` and the docs
+alongside the game, and runs no tests first.
+
+### Option B — S3 + CloudFront
 
 ```bash
 cp deploy.config.example deploy.config   # set BUCKET and DISTRIBUTION_ID
 ./deploy.sh
 ```
 
-### One-time AWS setup
+#### One-time AWS setup
 
 1. **S3 bucket** — create it, keep *Block all public access* **on**. The bucket is
    private; CloudFront reads it through OAC.
@@ -191,7 +235,7 @@ cp deploy.config.example deploy.config   # set BUCKET and DISTRIBUTION_ID
      response code, so deep links keep working.
 3. Run `./deploy.sh`.
 
-### Cache headers `deploy.sh` sets
+#### Cache headers `deploy.sh` sets
 
 | Path | `Cache-Control` | Why |
 | --- | --- | --- |

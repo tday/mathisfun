@@ -1,0 +1,101 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Pages needs these; the default GITHUB_TOKEN permissions are not enough.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race; queue instead, and don't cancel one mid-publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # Deterministic, no browser, ~10s. This one gates the deploy: shipping a build
+  # where the maths itself is broken is the only truly unacceptable outcome.
+  audit:
+    name: Curriculum audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Audit every question in all 140 stages
+        run: node tools/audit-questions.mjs
+
+  # Slower and timing-sensitive, so it reports but does not block publishing.
+  browser:
+    name: Browser smoke tests
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Playwright
+        working-directory: tools/e2e
+        run: |
+          npm init -y >/dev/null
+          npm i --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Serve the game
+        run: |
+          python3 -m http.server 8099 >/tmp/server.log 2>&1 &
+          for _ in $(seq 1 20); do
+            curl -sf -o /dev/null http://localhost:8099/index.html && break
+            sleep 0.5
+          done
+      - name: Run smoke tests
+        working-directory: tools/e2e
+        run: node run.mjs
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: /tmp/mmd-shots
+          if-no-files-found: ignore
+
+  deploy:
+    name: Publish
+    needs: audit
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Publish only what the browser needs. Dev tooling, the S3 deploy script
+      # and the docs stay out of the public site.
+      - name: Assemble the site
+        run: |
+          mkdir -p _site
+          rsync -a \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude '_site' \
+            --exclude 'tools' \
+            --exclude 'deploy.sh' \
+            --exclude 'deploy.config*' \
+            --exclude '*.md' \
+            --exclude '.gitignore' \
+            ./ _site/
+          # Tell Pages to serve the files as-is instead of running Jekyll.
+          touch _site/.nojekyll
+          ls -R _site | head -40
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
