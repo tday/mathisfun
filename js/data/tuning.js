@@ -10,7 +10,6 @@ export const ECONOMY = {
   streakBonusPerStep: 1,  // +1 per consecutive correct...
   streakBonusMax: 5,      // ...capped, so streaks are a bonus not a requirement
   bossMultiplier: 2,
-  duplicateFigureRefund: 15,
   stageClearBonus: 10,
 };
 
@@ -19,7 +18,20 @@ export const PRICES = {
   heartRefill: 30,
   heart4: 200,
   heart5: 400,
-  capsulePull: 25,
+};
+
+/**
+ * Capsule tokens are a separate, deliberately tiny currency. Coins run into the
+ * hundreds, which is unreadable arithmetic for a five-year-old; tokens stay in
+ * single digits so "I have 5, it costs 3, so I'll have 2 left" is a sum a child
+ * can actually do — and the machine shows them doing it.
+ */
+export const TOKENS = {
+  capsuleCost: 3,
+  perStageClear: 1,     // finishing a stage always earns one
+  perThreeStar: 1,      // a three-star clear earns one more
+  duplicateRefund: 1,   // a repeat monster hands a token straight back
+  startingTokens: 3,    // enough for one pull the first time you reach the map
 };
 
 export const COMBAT = {
@@ -56,13 +68,13 @@ export const COPY = {
   ],
   correctYoung: ['Yes!', 'Great!', 'Wow!', 'Nice!', 'Yay!'],
   effort: [
-    'Good try — look again!', 'Not yet — you\'re close!', 'Mistakes grow your brain!',
-    'Keep going, you\'ve got this!', 'Nearly! Try once more.', 'That was a good guess!',
+    'Good try — look again!', 'Not yet — so close!', 'Mistakes grow your brain!',
+    'Keep going, you can do it!', 'Nearly! Try once more.', 'That was a good guess!',
   ],
   effortYoung: ['Try again!', 'So close!', 'Keep going!', 'Almost!'],
   streak: ['On fire!', 'Unstoppable!', 'Amazing streak!', 'Super brain!'],
   reveal: [
-    'Here it is — now you know it!', 'This one\'s tricky. Now you\'ve seen it!',
+    'Here it is — now you know it!', 'A tricky one. Now you have seen it!',
     'Remember this one for next time!',
   ],
   stageWin: ['Castle defended!', 'You did it!', 'Monsters tucked in!', 'Victory!'],

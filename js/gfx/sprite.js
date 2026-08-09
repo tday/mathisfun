@@ -93,7 +93,7 @@ let flashId = 0;
 
 /**
  * Draw a baked sprite anchored at the character's feet.
- * `squash` gives the bouncy vinyl squash-and-stretch without extra art.
+ * `squash` gives the bouncy squash-and-stretch without needing extra art.
  */
 export function drawUnit(ctx, sprite, x, footY, size, opt = {}) {
   if (!sprite) return;

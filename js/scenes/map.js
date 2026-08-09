@@ -8,51 +8,67 @@ import { palette } from '../gfx/palettes.js';
 import { drawSkyDecor, drawGround, outlinedText, drawStars, FONT, Particles } from '../gfx/fx.js';
 import { INK, ink, roundRectPath } from '../gfx/toybox.js';
 import { mulberry32, clamp, withAlpha, lerp, makeSpline } from '../core/utils.js';
-import { el, clear, button, overlay, panel } from '../ui/dom.js';
+import { el, clear, button, overlay, panel, spriteImg } from '../ui/dom.js';
 import { openShop, openGacha, openCollection } from '../ui/panels.js';
 import {
   worldById, heroTier, STAGES_PER_WORLD, isStageUnlocked, nextStage, worldProgress,
 } from '../data/worlds.js';
 
 export function createMap() {
-  let game, world, pal, nodes, trail, decor, selected, t, particles, view, hero;
+  let game, world, pal, nodes, trail, decor, grid, selected, t, particles, view, hero;
   let playBtn, titleEl;
 
   /**
-   * Nodes are strung along one big winding trail rather than a rigid grid — it
-   * fills the space the way a Mario overworld does, and the trail is just the
-   * spline itself so the path can never miss a node.
+   * Node positions adapt to the screen shape. A single free-form spline looked
+   * good on a laptop but bunched stages on top of each other on a tall phone,
+   * so the nodes sit on a serpentine grid sized to the viewport and the trail
+   * is a spline drawn *through* them — even spacing, and the path can never
+   * miss a node.
    */
   function layout(w, h) {
     const rng = mulberry32(world.mapSeed);
-    const ctrl = [{ x: 0.08, y: 0.82 }];
-    const n = 5;
-    for (let i = 1; i <= n; i++) {
-      const t = i / (n + 1);
-      ctrl.push({
-        x: lerp(0.12, 0.88, t) + (rng() - 0.5) * 0.1,
-        y: 0.78 - t * 0.5 + (rng() - 0.5) * 0.3,
-      });
-    }
-    ctrl.push({ x: 0.9, y: 0.26 });
+    const portrait = h > w * 1.15;
+    const cols = portrait ? 3 : 5;
+    const rows = Math.ceil(STAGES_PER_WORLD / cols);
 
-    const spline = makeSpline(ctrl, 260);
+    const padX = w * (portrait ? 0.17 : 0.1);
+    // Top margin clears the HUD and the world name plate; the bottom margin has
+    // to fit the star row that hangs under each node.
+    const padTop = Math.max(h * 0.24, 132);
+    const padBot = Math.max(h * 0.16, 76);
+    const usableW = Math.max(1, w - padX * 2);
+    const usableH = Math.max(1, h - padTop - padBot);
+
     const out = [];
     for (let i = 0; i < STAGES_PER_WORLD; i++) {
-      const p = spline.at((i + 0.55) / (STAGES_PER_WORLD + 0.1));
-      out.push({ i, stage: i + 1, x: p.x * w, y: clamp(p.y, 0.16, 0.86) * h });
+      const row = Math.floor(i / cols);
+      const idx = i % cols;
+      // Serpentine, so the path snakes instead of jumping back each row.
+      const col = row % 2 === 0 ? idx : cols - 1 - idx;
+      const fx = cols === 1 ? 0.5 : col / (cols - 1);
+      const fy = rows === 1 ? 0.5 : row / (rows - 1);
+      out.push({
+        i,
+        stage: i + 1,
+        // Stage 1 sits at the bottom and the boss at the top.
+        x: padX + fx * usableW + (rng() - 0.5) * usableW * 0.05,
+        y: padTop + (1 - fy) * usableH + (rng() - 0.5) * usableH * 0.03,
+      });
     }
+
+    const spline = makeSpline(out.map((n) => ({ x: n.x / w, y: n.y / h })), 300);
 
     const decor = [];
     const props = ['tree', 'rock', 'bush'];
-    for (let i = 0; i < 12; i++) {
-      const x = rng() * w, y = (0.2 + rng() * 0.74) * h;
-      // Keep scenery clear of the nodes so nothing hides a stage.
-      if (out.some((nd) => Math.hypot(nd.x - x, nd.y - y) < Math.min(w, h) * 0.13)) continue;
-      decor.push({ name: props[Math.floor(rng() * props.length)], x, y, size: 40 + rng() * 56 });
+    const clearance = Math.min(w, h) * 0.15;
+    for (let i = 0; i < 14; i++) {
+      const x = rng() * w;
+      const y = (0.22 + rng() * 0.72) * h;
+      if (out.some((nd) => Math.hypot(nd.x - x, nd.y - y) < clearance)) continue;
+      decor.push({ name: props[Math.floor(rng() * props.length)], x, y, size: 38 + rng() * 52 });
     }
 
-    return { nodes: out, trail: spline, decor };
+    return { nodes: out, trail: spline, decor, cols, rows };
   }
 
   function refreshPanel() {
@@ -60,8 +76,8 @@ export function createMap() {
     const unlocked = isStageUnlocked(save, world, selected);
     const stars = save.starsFor(world.id)[selected - 1] || 0;
     playBtn.textContent = unlocked
-      ? `▶ Play Stage ${selected}${selected === STAGES_PER_WORLD ? ' — Boss!' : ''}`
-      : `🔒 Stage ${selected} is locked`;
+      ? `Play Stage ${selected}${selected === STAGES_PER_WORLD ? ' — Boss!' : ''}`
+      : `Stage ${selected} is locked`;
     playBtn.disabled = !unlocked;
     playBtn.className = `btn ${unlocked ? 'primary' : ''}`;
     titleEl.textContent = unlocked && stars
@@ -82,19 +98,23 @@ export function createMap() {
       t = 0;
       particles = new Particles();
       view = { w: game.screen.w, h: game.screen.h };
-      ({ nodes, trail, decor } = layout(view.w, view.h));
+      grid = layout(view.w, view.h);
+      ({ nodes, trail, decor } = grid);
       selected = p.stage || nextStage(game.save, world);
       hero = { at: selected - 1, x: 0, y: 0, walkTo: null };
 
       clear(overlay());
       const bar = el('div', { class: 'hud' },
-        button('←', { cls: 'icon ghost', audio: game.audio, ariaLabel: 'Back to worlds' },
+        button('', { cls: 'icon ghost', audio: game.audio, ariaLabel: 'Back to worlds', icon: 'iconBack', game },
           () => game.engine.go('worldSelect')),
         el('div', { class: 'pill' }, `${world.bandName}`),
         el('div', { class: 'spacer' }),
-        button('🎰', { cls: 'icon ghost', audio: game.audio, ariaLabel: 'Capsule machine' }, () => openGacha(game)),
-        button('🧸', { cls: 'icon ghost', audio: game.audio, ariaLabel: 'Collection' }, () => openCollection(game)),
-        button('🛒', { cls: 'icon ghost', audio: game.audio, ariaLabel: 'Shop' }, () => openShop(game)),
+        el('div', { class: 'pill', 'aria-label': `${game.save.data.tokens || 0} capsule tokens` },
+          spriteImg(game.sprites.prop('token', 24), 24),
+          el('span', {}, String(game.save.data.tokens || 0))),
+        button('', { cls: 'icon ghost', audio: game.audio, ariaLabel: 'Capsule machine', icon: 'capsule', game }, () => openGacha(game)),
+        button('', { cls: 'icon ghost', audio: game.audio, ariaLabel: 'My monsters', icon: 'iconAlbum', game }, () => openCollection(game)),
+        button('', { cls: 'icon ghost', audio: game.audio, ariaLabel: 'Shop', icon: 'iconShop', game }, () => openShop(game)),
       );
       overlay().append(bar);
 
@@ -103,9 +123,9 @@ export function createMap() {
         game.engine.go('play', { worldId: world.id, stage: selected });
       });
       const nav = el('div', { class: 'row', style: { display: 'flex', gap: '8px', justifyContent: 'center' } },
-        button('◀', { cls: 'small ghost', audio: game.audio, ariaLabel: 'Previous stage' }, () => select(selected - 1)),
+        button('', { cls: 'icon ghost', audio: game.audio, ariaLabel: 'Previous stage', icon: 'iconArrow', iconOpts: { dir: 'left' }, game }, () => select(selected - 1)),
         playBtn,
-        button('▶', { cls: 'small ghost', audio: game.audio, ariaLabel: 'Next stage' }, () => select(selected + 1)),
+        button('', { cls: 'icon ghost', audio: game.audio, ariaLabel: 'Next stage', icon: 'iconArrow', game }, () => select(selected + 1)),
       );
       clear(panel());
       panel().append(el('div', { class: 'qcard', style: { gap: '4px' } }, titleEl, nav));
@@ -121,7 +141,8 @@ export function createMap() {
 
     onLayout(w, h) {
       view = { w, h };
-      ({ nodes, trail, decor } = layout(w, h));
+      grid = layout(w, h);
+      ({ nodes, trail, decor } = grid);
     },
 
     update(dt) {
@@ -196,9 +217,9 @@ export function createMap() {
         ctx.scale(pulse, pulse);
 
         if (isBoss) {
-          const bs = r * 3.1;
+          const bs = r * 2.5;
           const sp = game.sprites.prop('bossCastle', bs);
-          if (sp) ctx.drawImage(sp, -bs / 2, -bs * 0.78, bs, bs);
+          if (sp) ctx.drawImage(sp, -bs / 2, -bs * 0.62, bs, bs);
         } else {
           ctx.beginPath();
           ctx.arc(0, 4, r, 0, Math.PI * 2);
@@ -220,7 +241,7 @@ export function createMap() {
           const sp = game.sprites.prop('lock', ls);
           if (sp) ctx.drawImage(sp, -ls / 2, -ls / 2 - (isBoss ? r : 0), ls, ls);
         } else {
-          outlinedText(ctx, String(n.stage), 0, isBoss ? -r * 1.5 : 1,
+          outlinedText(ctx, String(n.stage), 0, isBoss ? -r * 1.15 : 1,
             `900 ${r * (isBoss ? 0.95 : 1.15)}px ${FONT}`, '#fff8ec', 5);
         }
         if (unlocked && s > 0) drawStars(ctx, 0, (isBoss ? r * 1.35 : r * 1.42), r * 0.36, s);
@@ -253,6 +274,9 @@ export function createMap() {
   };
 
   function nodeRadius() {
-    return clamp(Math.min(view.w, view.h) * 0.062, 22, 46);
+    const cols = grid.cols || 5;
+    const rows = grid.rows || 2;
+    // Fit inside a grid cell so neighbouring stages can never touch.
+    return clamp(Math.min(view.w / (cols * 2.5), view.h / (rows * 3.2)), 18, 44);
   }
 }

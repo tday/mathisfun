@@ -18,17 +18,21 @@ export const UI = {
   tryAgain: '#ffb347',
 };
 
-/** Base colours per monster archetype, before the world mood shift. */
+/**
+ * Base colours per monster archetype, before the world mood shift.
+ * Softer and less saturated than a typical game palette: flat shapes in muted
+ * tones read as "kawaii mascot", while the same shapes in neon read as "clip art".
+ */
 export const MONSTER_BASE = {
-  blobbie: { body: '#7ee0b8', accent: '#4fc79a', iris: '#2b1633' },
-  shellby: { body: '#ffd08a', accent: '#e4924a', iris: '#3a1c2e' },
-  flitter: { body: '#b6a4ff', accent: '#8f79f0', iris: '#2a1440' },
-  shroomp: { body: '#ff9db1', accent: '#f2647f', iris: '#39182c' },
-  webble: { body: '#8fd0ff', accent: '#4fa8e8', iris: '#1c2b45' },
-  boolie: { body: '#eaf0ff', accent: '#c3cbe8', iris: '#332046' },
-  hornlet: { body: '#ff9f6e', accent: '#ef7040', iris: '#3d1a1a' },
-  rumble: { body: '#a9a2b8', accent: '#7e778f', iris: '#2b2038' },
-  dragon: { body: '#c58cff', accent: '#8f4fd6', iris: '#2a1240' },
+  blobbie: { body: '#8fd9a8', accent: '#5fb583', iris: '#4a3a46' },
+  shellby: { body: '#f3c583', accent: '#d99a55', iris: '#4a3a46' },
+  flitter: { body: '#b3a6e0', accent: '#8b7cc4', iris: '#4a3a46' },
+  shroomp: { body: '#f2a0ad', accent: '#d97a8c', iris: '#4a3a46' },
+  webble: { body: '#8fc4e8', accent: '#5f9ac9', iris: '#4a3a46' },
+  boolie: { body: '#e8ecf5', accent: '#c2c9db', iris: '#4a3a46' },
+  hornlet: { body: '#f0a279', accent: '#d17c52', iris: '#4a3a46' },
+  rumble: { body: '#adb0bd', accent: '#868a99', iris: '#4a3a46' },
+  dragon: { body: '#9fc47f', accent: '#7aa25c', iris: '#4a3a46' },
 };
 
 export const HERO = {
@@ -84,13 +88,13 @@ export const PALETTES = {
     mood: { h: -14, s: 1.03, l: 0.99 },
   },
   sky: {
-    sky: ['#9fd8ff', '#e6f4ff'], ground: '#dbe9ff', groundDark: '#b3ccef',
-    path: '#fff6ff', pathEdge: '#cdbdf0', prop: '#ffffff', accent: '#b6a4ff',
+    sky: ['#9fd8ff', '#e6f4ff'], ground: '#c9dcf7', groundDark: '#a3bfe4',
+    path: '#ffe9b8', pathEdge: '#d9b882', prop: '#ffffff', accent: '#b6a4ff',
     mood: { h: 12, s: 1.0, l: 1.0 },
   },
   snow: {
-    sky: ['#cfe8ff', '#f6fbff'], ground: '#eef6ff', groundDark: '#c3d8ee',
-    path: '#dfeeff', pathEdge: '#adc6e2', prop: '#8fb8e0', accent: '#7ee0ff',
+    sky: ['#cfe8ff', '#f6fbff'], ground: '#e2eefb', groundDark: '#b6cee6',
+    path: '#cfe0f2', pathEdge: '#8fa9c4', prop: '#8fb8e0', accent: '#7ee0ff',
     mood: { h: 16, s: 0.95, l: 1.0 },
   },
   desert: {
@@ -100,26 +104,26 @@ export const PALETTES = {
   },
   cave: {
     sky: ['#5f4a78', '#8a6fa3'], ground: '#6b5680', groundDark: '#4a3a5c',
-    path: '#a58bbc', pathEdge: '#7a6291', prop: '#3f3152', accent: '#9ef2ff',
+    path: '#a58bbc', pathEdge: '#7a6291', prop: '#5d4a75', accent: '#9ef2ff',
     dusk: 0.18,
-    mood: { h: -8, s: 1.06, l: 0.94 },
+    mood: { h: -8, s: 1.02, l: 0.96 },
   },
   jungle: {
     sky: ['#a7e6c4', '#dff7d8'], ground: '#5cb46a', groundDark: '#377f4e',
     path: '#dcc493', pathEdge: '#ad8e5f', prop: '#1f6b46', accent: '#ffd166',
-    mood: { h: -12, s: 1.08, l: 0.95 },
+    mood: { h: -12, s: 1.03, l: 0.96 },
   },
   volcano: {
     sky: ['#ff9f6e', '#ffd3a8'], ground: '#7a5060', groundDark: '#553646',
-    path: '#c98b6b', pathEdge: '#9a6249', prop: '#4a2c3a', accent: '#ff6f4a',
+    path: '#c98b6b', pathEdge: '#9a6249', prop: '#6d4353', accent: '#ff6f4a',
     dusk: 0.12,
-    mood: { h: 14, s: 1.12, l: 0.93 },
+    mood: { h: 14, s: 1.06, l: 0.95 },
   },
   swamp: {
     sky: ['#9fc2a8', '#d6e8cd'], ground: '#6f9a6a', groundDark: '#4b6f52',
     path: '#b6ac7c', pathEdge: '#8a8058', prop: '#3c5a44', accent: '#c8ff8f',
     dusk: 0.1,
-    mood: { h: -18, s: 1.05, l: 0.92 },
+    mood: { h: -18, s: 1.02, l: 0.94 },
   },
   mountain: {
     sky: ['#b9cfe8', '#e9f2fb'], ground: '#9aa8bd', groundDark: '#6e7d94',
@@ -128,15 +132,15 @@ export const PALETTES = {
   },
   keep: {
     sky: ['#4a3a68', '#6f5891'], ground: '#54466e', groundDark: '#382d4d',
-    path: '#8a76ab', pathEdge: '#5f4f7d', prop: '#2c2340', accent: '#ff6f91',
+    path: '#8a76ab', pathEdge: '#5f4f7d', prop: '#4a3d63', accent: '#ff6f91',
     dusk: 0.24,
-    mood: { h: -4, s: 1.1, l: 0.9 },
+    mood: { h: -4, s: 1.04, l: 0.93 },
   },
   space: {
     sky: ['#2b1f4d', '#4b3a7a'], ground: '#3d3163', groundDark: '#281f45',
-    path: '#7d68b8', pathEdge: '#54428a', prop: '#1c1636', accent: '#9ef2ff',
+    path: '#7d68b8', pathEdge: '#54428a', prop: '#3b3161', accent: '#9ef2ff',
     dusk: 0.3, stars: true,
-    mood: { h: 8, s: 1.14, l: 0.9 },
+    mood: { h: 8, s: 1.06, l: 0.93 },
   },
 };
 

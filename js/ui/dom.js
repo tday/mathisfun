@@ -23,15 +23,24 @@ export function el(tag, props = {}, ...children) {
 
 /** A chunky game button that always makes its tap sound. */
 export function button(label, opts = {}, onClick) {
-  const { cls = '', audio, ariaLabel, disabled = false } = opts;
+  const { cls = '', audio, ariaLabel, disabled = false, icon, game, iconOpts } = opts;
   const b = el('button', {
     class: `btn ${cls}`.trim(),
     type: 'button',
     'aria-label': ariaLabel,
     disabled: disabled || undefined,
   });
-  if (typeof label === 'string') b.textContent = label;
-  else b.append(label);
+  // A drawn icon always renders; an emoji may not, and a child cannot recover
+  // from a control that shows up as an empty box.
+  if (icon && game) {
+    const size = cls.includes('icon') ? 30 : 26;
+    b.append(spriteImg(game.sprites.prop(icon, size, iconOpts || {}), size));
+  }
+  if (typeof label === 'string') {
+    if (label) b.append(el('span', {}, label));
+  } else if (label) {
+    b.append(label);
+  }
   b.addEventListener('click', (e) => {
     if (b.disabled) return;
     audio?.tap();

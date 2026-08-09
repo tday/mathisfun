@@ -4,6 +4,7 @@
 import { el, clear, button, overlay, panel } from '../ui/dom.js';
 import { drawSkyDecor, drawGround, outlinedText, drawStars, Particles, FONT } from '../gfx/fx.js';
 import { palette } from '../gfx/palettes.js';
+import { INK, ink, roundRectPath } from '../gfx/toybox.js';
 import { drawUnit } from '../gfx/sprite.js';
 import { clamp } from '../core/utils.js';
 import { say } from '../data/tuning.js';
@@ -36,24 +37,29 @@ export function createResults() {
       if (data.correct > prevBest && data.correct > 0) lines.push(`New personal best: ${data.correct} right first time!`);
       else if (data.correct > 0) lines.push(`${data.correct} right first time — your best here is ${prevBest}.`);
       if (data.bestStreak >= 3) lines.push(`Longest streak: ${data.bestStreak} in a row!`);
+      if (data.tokensEarned > 0) {
+        lines.push(`You earned ${data.tokensEarned} capsule token${data.tokensEarned === 1 ? '' : 's'}!`);
+      }
       if (!data.won) lines.push('You keep every coin you earned. Nothing is lost.');
       if (data.assisted && data.won) lines.push('Some answers needed a peek — that is how learning works.');
 
       const body = el('div', { class: 'qcard' },
-        el('p', { class: 'qprompt', style: { fontSize: '1.5rem' } }, headline),
+        el('p', { class: 'qprompt', style: { fontSize: 'clamp(1.6rem, 5.5vw, 2.4rem)' } }, headline),
         ...lines.map((l) => el('p', { class: 'feedback', style: { margin: 0 } }, l)),
       );
 
       const row = el('div', { class: 'row', style: { display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '6px' } });
       const nextStageNo = data.stage + 1;
       if (data.won && nextStageNo <= STAGES_PER_WORLD && isStageUnlocked(game.save, world, nextStageNo)) {
-        row.append(button(`▶ Stage ${nextStageNo}`, { cls: 'primary', audio: game.audio },
+        row.append(button(`Stage ${nextStageNo}`, { cls: 'primary', audio: game.audio, icon: 'iconPlay', game },
           () => game.engine.go('play', { worldId: world.id, stage: nextStageNo })));
       }
-      row.append(button(data.won ? '↻ Play again' : '↻ Try again', { cls: data.won ? 'ghost' : 'primary', audio: game.audio },
-        () => game.engine.go('play', { worldId: world.id, stage: data.stage })));
-      row.append(button('🎰 Capsule', { cls: 'ghost', audio: game.audio }, () => openGacha(game)));
-      row.append(button('🗺 Map', { cls: 'ghost', audio: game.audio },
+      row.append(button(data.won ? 'Play again' : 'Try again', {
+        cls: data.won ? 'ghost' : 'primary', audio: game.audio, icon: 'iconRetry', game,
+      }, () => game.engine.go('play', { worldId: world.id, stage: data.stage })));
+      row.append(button('Capsule', { cls: 'ghost', audio: game.audio, icon: 'capsule', game },
+        () => openGacha(game)));
+      row.append(button('Map', { cls: 'ghost', audio: game.audio, icon: 'iconMap', game },
         () => game.engine.go('map', { worldId: world.id, stage: data.stage })));
       body.append(row);
       panel().append(body);
@@ -83,8 +89,14 @@ export function createResults() {
       drawGround(ctx, v, pal, v.h * 0.78);
 
       ctx.textAlign = 'center';
-      outlinedText(ctx, `${world.name} · Stage ${data.stage}`, v.w / 2, v.h * 0.14,
-        `900 ${Math.min(v.w * 0.055, 28)}px ${FONT}`, '#fff8ec', 6);
+      const title = `${world.name} · Stage ${data.stage}`;
+      const tSize = Math.min(v.w * 0.055, 30);
+      ctx.font = `900 ${tSize}px ${FONT}`;
+      const plateW = Math.min(ctx.measureText(title).width + 44, v.w - 24);
+      roundRectPath(ctx, (v.w - plateW) / 2, v.h * 0.14 - tSize * 0.9, plateW, tSize * 1.8, tSize);
+      ctx.fillStyle = INK;
+      ctx.fill();
+      outlinedText(ctx, title, v.w / 2, v.h * 0.14, `900 ${tSize}px ${FONT}`, '#fff8ec', 0, null);
 
       const starSize = clamp(Math.min(v.w, v.h) * 0.075, 22, 46);
       drawStars(ctx, v.w / 2, v.h * 0.3, starSize, shownStars);

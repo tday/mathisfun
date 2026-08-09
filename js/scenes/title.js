@@ -26,18 +26,18 @@ export function createTitle() {
     if (last) {
       const [wid, stage] = last.split('/');
       const w = worldById(wid);
-      row.append(button(`▶ Continue — ${w.name} ${stage}`, { cls: 'primary', audio: game.audio }, () => {
+      row.append(button(`Continue — ${w.name} ${stage}`, { cls: 'primary', audio: game.audio, icon: 'iconPlay', game }, () => {
         game.engine.go('map', { worldId: w.id });
       }));
       row.append(button('Choose a world', { cls: 'ghost', audio: game.audio }, () => game.engine.go('worldSelect')));
     } else {
-      row.append(button('▶ Play', { cls: 'primary', audio: game.audio }, () => game.engine.go('worldSelect')));
+      row.append(button('Play', { cls: 'primary', audio: game.audio, icon: 'iconPlay', game }, () => game.engine.go('worldSelect')));
     }
 
     const tools = el('div', { class: 'row', style: { display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '10px' } });
     tools.append(
-      button('🧸 Monsters', { cls: 'small ghost', audio: game.audio }, () => openCollection(game)),
-      button('⚙️ Settings', { cls: 'small ghost', audio: game.audio }, () => openSettings(game)),
+      button('My Monsters', { cls: 'small ghost', audio: game.audio, icon: 'iconAlbum', game }, () => openCollection(game)),
+      button('Settings', { cls: 'small ghost', audio: game.audio }, () => openSettings(game)),
     );
 
     p.append(el('div', { class: 'qcard', style: { gap: '4px' } }, row, tools));

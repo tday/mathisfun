@@ -5,6 +5,7 @@ import { Engine } from './core/engine.js';
 import { Save } from './core/save.js';
 import { GameAudio } from './audio/audio.js';
 import { SpriteBank } from './gfx/sprite.js';
+import { installTouchLock } from './core/touchlock.js';
 
 import { createTitle } from './scenes/title.js';
 import { createWorldSelect } from './scenes/worldSelect.js';
@@ -17,6 +18,7 @@ const params = new URLSearchParams(location.search);
 const DEBUG = params.has('debug');
 
 function boot() {
+  installTouchLock();
   const canvas = document.getElementById('game');
   const screen = new Screen(canvas);
   const save = new Save();

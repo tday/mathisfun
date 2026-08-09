@@ -78,8 +78,16 @@ export class Music {
     return { bass, arp, mel, beat, spb: 60 / tempo / 2, len };
   }
 
+  /** Drop the backlog after the tab was hidden, rather than firing it all at once. */
+  resync() {
+    if (this.timer) this.nextTime = this.ctx.currentTime + 0.06;
+  }
+
   _schedule() {
     const AHEAD = 0.15;
+    // Belt and braces: if we ever fall far behind (throttled timer, suspended
+    // context), skip forward instead of machine-gunning the missed notes.
+    if (this.nextTime < this.ctx.currentTime - 0.5) this.resync();
     while (this.nextTime < this.ctx.currentTime + AHEAD) {
       this._playStep(this.step % this.pattern.len, this.nextTime);
       this.nextTime += this.pattern.spb;

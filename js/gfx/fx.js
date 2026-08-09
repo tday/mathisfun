@@ -412,6 +412,49 @@ const VISUALS = {
     }
   },
 
+  /**
+   * A row of number cards with one gap — "2 3 4 ?" or "? 5 6 7".
+   * The sequence itself says which way to count, so before/after questions
+   * stop depending on a child being able to read the words "before" and "after".
+   */
+  numberTrack(ctx, spec, bank, w, h) {
+    const cells = spec.cells;
+    const n = cells.length;
+    const gap = 8;
+    const size = Math.min((w - gap * (n - 1) - 8) / n, h - 6);
+    const totalW = n * size + gap * (n - 1);
+    const x0 = (w - totalW) / 2;
+    const y0 = (h - size) / 2;
+
+    cells.forEach((cell, i) => {
+      const x = x0 + i * (size + gap);
+      const isGap = cell === null;
+      roundRectPath(ctx, x, y0, size, size, size * 0.24);
+      ctx.fillStyle = isGap ? '#ffe9a8' : '#ffffff';
+      ctx.fill();
+      ink(ctx, isGap ? 4 : 3);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      outlinedText(ctx, isGap ? '?' : String(cell), x + size / 2, y0 + size / 2,
+        `900 ${size * 0.56}px ${FONT}`, isGap ? '#b45f09' : '#3d2447', 0, null);
+    });
+
+    // An arrow under the track reinforces the direction of travel.
+    const ay = y0 + size + 6;
+    if (ay < h - 2) {
+      const dir = spec.dir === 'back' ? -1 : 1;
+      const cx = w / 2;
+      ctx.beginPath();
+      ctx.moveTo(cx - 26 * dir, ay);
+      ctx.lineTo(cx + 22 * dir, ay);
+      ctx.moveTo(cx + 22 * dir, ay);
+      ctx.lineTo(cx + 12 * dir, ay - 6);
+      ctx.moveTo(cx + 22 * dir, ay);
+      ctx.lineTo(cx + 12 * dir, ay + 6);
+      ink(ctx, 3.5, withAlpha(INK, 0.75));
+    }
+  },
+
   /** Basic shape recognition for Pre-K. */
   shape(ctx, spec, bank, w, h) {
     const r = Math.min(w, h) * 0.36;

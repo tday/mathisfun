@@ -12,6 +12,7 @@ export function blankSave() {
   return {
     v: VERSION,
     coins: 0,
+    tokens: 3,        // enough for one capsule pull straight away
     maxHearts: 3,
     shields: 0,
     stars: {},        // worldId -> [10] star counts, 0 = unplayed
@@ -67,6 +68,7 @@ export class Save {
     };
     out.stats.perSkill = out.stats.perSkill && typeof out.stats.perSkill === 'object' ? out.stats.perSkill : {};
     out.coins = Number.isFinite(out.coins) ? Math.max(0, Math.floor(out.coins)) : 0;
+    out.tokens = Number.isFinite(out.tokens) ? Math.max(0, Math.floor(out.tokens)) : 0;
     out.maxHearts = Math.min(5, Math.max(3, Math.floor(out.maxHearts) || 3));
     out.shields = Math.max(0, Math.floor(out.shields) || 0);
     out.v = VERSION;
@@ -157,6 +159,18 @@ export class Save {
     // Cap the per-skill map so a very long-lived save can't creep past quota.
     const keys = Object.keys(s.perSkill);
     if (keys.length > 80) delete s.perSkill[keys[0]];
+  }
+
+  addTokens(n) {
+    this.data.tokens = Math.max(0, (this.data.tokens || 0) + n);
+    this.save();
+  }
+
+  spendTokens(n) {
+    if ((this.data.tokens || 0) < n) return false;
+    this.data.tokens -= n;
+    this.save();
+    return true;
   }
 
   addFigure(id) {

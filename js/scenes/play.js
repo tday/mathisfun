@@ -18,7 +18,7 @@ import { Hud } from '../ui/hud.js';
 import { QuestionPanel } from '../ui/questionPanel.js';
 import { openPause, openShop } from '../ui/panels.js';
 import { makeQuestion } from '../data/questions.js';
-import { ECONOMY, COMBAT, starsFor, praise, encourage, say } from '../data/tuning.js';
+import { ECONOMY, COMBAT, TOKENS, starsFor, praise, encourage, say } from '../data/tuning.js';
 import { buildSpawns, makeStagePath, makeEnemy } from './waves.js';
 import { worldById, heroTier, STAGES_PER_WORLD } from '../data/worlds.js';
 
@@ -220,6 +220,13 @@ export function createPlay() {
       maxHearts,
       allEventuallyCorrect: won && !assisted,
     });
+    // Capsule tokens come from finishing, not from being perfect — so a child
+    // who struggles still collects monsters at a steady rate.
+    let tokensEarned = 0;
+    if (won) {
+      tokensEarned = TOKENS.perStageClear + (stars >= 3 ? TOKENS.perThreeStar : 0);
+      game.save.addTokens(tokensEarned);
+    }
     if (won) {
       game.audio?.fanfare();
       const c = castlePx();
@@ -238,7 +245,7 @@ export function createPlay() {
     setTimeout(() => {
       game.engine.go('results', {
         worldId: world.id, stage, won, stars, coins: coinsEarned,
-        correct: correctCount, attempts, bestStreak, assisted, prevBest,
+        correct: correctCount, attempts, bestStreak, assisted, prevBest, tokensEarned,
       });
     }, won ? 1500 : 1100);
   }

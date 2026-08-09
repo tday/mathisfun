@@ -65,6 +65,15 @@ for (const world of WORLDS) {
       bucket[q.answerIndex]++;
       positions.set(texts.length, bucket);
 
+      // Pre-K and Kindergarten must never hinge on reading a single word. If a
+      // prompt names a direction, a drawn chip has to carry it too.
+      if (world.band <= 1 && /\b(MORE|FEWER|BIGGER|SMALLER|BIGGEST|SMALLEST)\b/.test(q.prompt || '')) {
+        if (!q.promptIcon) fail(world, stage, q, 'direction word with no icon for a pre-reader');
+      }
+      if (world.band <= 1 && /\b(before|after)\b/i.test(q.prompt || '')) {
+        fail(world, stage, q, 'before/after wording requires reading');
+      }
+
       // Visual specs must be complete enough for fx.js to draw them.
       if (q.visual) {
         const v = q.visual;
@@ -78,6 +87,7 @@ for (const world of WORLDS) {
           fractionCircle: () => v.den > 0 && v.num >= 0,
           numberLine: () => Number.isFinite(v.min) && Number.isFinite(v.max) && v.max > v.min,
           shape: () => !!v.shape,
+          numberTrack: () => Array.isArray(v.cells) && v.cells.length >= 2 && v.cells.filter((c) => c === null).length === 1,
         }[v.kind];
         if (!ok) fail(world, stage, q, `unknown visual kind "${v.kind}"`);
         else if (!ok()) fail(world, stage, q, `invalid ${v.kind} visual: ${JSON.stringify(v)}`);

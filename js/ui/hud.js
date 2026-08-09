@@ -9,32 +9,45 @@ export class Hud {
     this.coinsEl = el('div', { class: 'pill', 'aria-label': 'Coins' });
     this.shieldEl = el('div', { class: 'pill', 'aria-label': 'Shields', hidden: true });
 
-    this.pauseBtn = button('❚❚', { cls: 'icon ghost', audio: game.audio, ariaLabel: 'Pause' }, onPause);
-    this.shopBtn = button('🛒', { cls: 'icon ghost', audio: game.audio, ariaLabel: 'Shop' }, onShop);
-    this.muteBtn = button(game.save.data.settings.muted ? '🔇' : '🔊', {
-      cls: 'icon ghost', audio: game.audio, ariaLabel: 'Sound on or off',
+    this.pauseBtn = button('', {
+      cls: 'icon ghost', audio: game.audio, ariaLabel: 'Pause', icon: 'iconPause', game,
+    }, onPause);
+    this.shopBtn = button('', {
+      cls: 'icon ghost', audio: game.audio, ariaLabel: 'Shop', icon: 'iconShop', game,
+    }, onShop);
+    this.muteBtn = button('', {
+      cls: 'icon ghost',
+      audio: game.audio,
+      ariaLabel: 'Sound on or off',
+      icon: game.save.data.settings.muted ? 'iconSoundOff' : 'iconSoundOn',
+      game,
     }, () => {
       const m = !game.save.data.settings.muted;
       game.audio.setMuted(m);
       game.save.save();
-      this.muteBtn.textContent = m ? '🔇' : '🔊';
+      clear(this.muteBtn);
+      this.muteBtn.append(spriteImg(game.sprites.prop(m ? 'iconSoundOff' : 'iconSoundOn', 30), 30));
     });
 
+    this.waveLabel = el('span');
+    this.waveBadge = el('div', { class: 'wave-badge', hidden: true }, this.waveLabel);
+
+    // The badge lives inside the HUD flow rather than floating at a fixed
+    // offset: on a narrow phone the controls wrap to two rows, and an
+    // absolutely-positioned badge landed straight on top of them.
     this.root = el('div', { class: 'hud' },
       this.heartsEl, this.shieldEl, this.coinsEl,
       el('div', { class: 'spacer' }),
-      this.shopBtn, this.muteBtn, this.pauseBtn);
-
-    this.waveBadge = el('div', { class: 'wave-badge', hidden: true });
+      this.shopBtn, this.muteBtn, this.pauseBtn,
+      this.waveBadge);
   }
 
   mount(host) {
-    host.append(this.root, this.waveBadge);
+    host.append(this.root);
   }
 
   destroy() {
     this.root.remove();
-    this.waveBadge.remove();
   }
 
   setHearts(current, max) {
@@ -66,7 +79,7 @@ export class Hud {
 
   setWave(text) {
     this.waveBadge.hidden = !text;
-    if (text) this.waveBadge.textContent = text;
+    if (text) this.waveLabel.textContent = text;
   }
 
   /** Screen position of the coin counter, so coin particles can fly to it. */

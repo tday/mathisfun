@@ -3,488 +3,502 @@
 //
 // Each entry is `draw(ctx, opt)` where opt carries the world-tinted colours plus
 // per-frame flags. sprite.js bakes these to offscreen canvases and caches them.
+//
+// Style: plump kawaii mascots. Flat colour, thin outline, tiny dot eyes, one
+// small mouth, big blush. Each character is ONE clear silhouette plus ONE
+// signature detail — spikes, a shell, ears — so it stays readable at 60px on a
+// phone, which is the size that actually matters.
 
 import {
-  INK, blobPath, roundRectPath, ink, vinyl, sheen, bodyBlob, groundShadow,
-  eye, grin, smile, blush, horn, earTriangle, limb, foot, tail, helm, eliteBadge, aura,
-  fiveStar,
+  INK, blobPath, eggPath, roundRectPath, ink, fill, flat, body, belly, groundShadow,
+  eye, mouth, blush, horn, earTriangle, earRound, limb, foot, nub, tail, spikes,
+  helm, eliteBadge, aura, fiveStar,
 } from './toybox.js';
-import { lighten, darken, withAlpha } from '../core/utils.js';
+import { lighten, darken } from '../core/utils.js';
 import { HERO, HERO_TIERS } from './palettes.js';
 
 const FEET = 96;
 
-/** Backlight for an "elite" (world-2) variant; the gold badge goes on top. */
-function eliteTrim(ctx, cx, cy, r, accent) {
-  aura(ctx, cx, cy, r * 1.6, accent, 0.55);
-}
-
 // ------------------------------------------------------------------- monsters
 
+/** Blobbie — a round little slime with a single droplet antenna. */
 function blobbie(ctx, o) {
-  const { c, blink = 0, look = [0.12, 0.1], armored, elite } = o;
-  groundShadow(ctx, 50, FEET, 32);
-  if (elite) eliteTrim(ctx, 50, 62, 34, c.accent);
-
-  bodyBlob(ctx, 50, 62, 35, 33, c.body, { flat: 0.34 });
-
-  // Droplet antenna — drawn over the body so the stalk actually shows.
-  limb(ctx, 50, 34, 53, 22, 5, c.accent);
-  ctx.beginPath();
-  ctx.arc(54, 18, 7, 0, Math.PI * 2);
-  ctx.fillStyle = lighten(c.accent, 0.2);
-  ctx.fill();
-  ink(ctx, 2.6);
-
-  eye(ctx, 38, 55, 10.5, { blink, look, iris: c.iris, angry: 0.5, side: -1 });
-  eye(ctx, 63, 55, 10.5, { blink, look, iris: c.iris, angry: 0.5, side: 1 });
-  blush(ctx, 27, 70, 7.5, '#ff7a9e', 0.55);
-  blush(ctx, 74, 70, 7.5, '#ff7a9e', 0.55);
-  grin(ctx, 50, 71, 30, 8, { teeth: 5 });
-
-  if (armored) helm(ctx, 50, 36, 52, 24);
-  if (elite) eliteBadge(ctx, 76, 34);
-}
-
-function shellby(ctx, o) {
-  const { c, blink = 0, look = [0.2, 0.05], armored, elite } = o;
-  groundShadow(ctx, 50, FEET, 36);
-  if (elite) eliteTrim(ctx, 44, 58, 32, c.accent);
-
-  // Foot / body slug base.
-  blobPath(ctx, 52, 84, 40, 13, { flat: 0.5 });
-  vinyl(ctx, lighten(c.body, 0.08), 71, 97);
-  ink(ctx, 3);
-
-  // Spiral shell.
-  ctx.save();
-  ctx.translate(38, 58);
-  blobPath(ctx, 0, 0, 27, 26, { flat: 0.05 });
-  vinyl(ctx, c.accent, -26, 26);
-  ctx.save(); ctx.clip(); sheen(ctx, -10, -12, 18, 15, 0.5); ctx.restore();
-  blobPath(ctx, 0, 0, 27, 26, { flat: 0.05 });
-  ink(ctx, 3.2);
-  ctx.beginPath();
-  for (let i = 0; i <= 60; i++) {
-    const t = i / 60, a = t * Math.PI * 3.4, r = 24 * (1 - t * 0.92);
-    const x = Math.cos(a) * r * 0.95, y = Math.sin(a) * r * 0.95;
-    ctx[i === 0 ? 'moveTo' : 'lineTo'](x, y);
-  }
-  ink(ctx, 3, withAlpha(INK, 0.75));
-  ctx.restore();
-
-  // Head with eye stalks.
-  limb(ctx, 72, 74, 70, 50, 5, c.body);
-  limb(ctx, 82, 74, 86, 52, 5, c.body);
-  eye(ctx, 69, 45, 8.5, { blink, look, iris: c.iris, angry: 0.7, side: -1 });
-  eye(ctx, 87, 47, 8.5, { blink, look, iris: c.iris, angry: 0.7, side: 1 });
-  blobPath(ctx, 78, 76, 17, 13, { flat: 0.3 });
-  ctx.fillStyle = c.body; ctx.fill(); ink(ctx, 3);
-  grin(ctx, 79, 76, 17, 5, { teeth: 3, tongue: false });
-
-  if (armored) helm(ctx, 78, 60, 30, 15);
-  if (elite) eliteBadge(ctx, 26, 32);
-}
-
-function flitter(ctx, o) {
-  const { c, blink = 0, look = [0.1, 0.12], armored, elite } = o;
-  groundShadow(ctx, 50, FEET, 26, 8, 0.16);
-  if (elite) eliteTrim(ctx, 50, 56, 32, c.accent);
-
-  // Wings behind the body.
-  for (const s of [-1, 1]) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(50 + s * 22, 52);
-    ctx.quadraticCurveTo(50 + s * 52, 26, 50 + s * 46, 56);
-    ctx.quadraticCurveTo(50 + s * 40, 48, 50 + s * 36, 62);
-    ctx.quadraticCurveTo(50 + s * 30, 54, 50 + s * 22, 66);
-    ctx.closePath();
-    ctx.fillStyle = darken(c.accent, 0.06);
-    ctx.fill();
-    ink(ctx, 2.8);
-    ctx.restore();
-  }
-
-  earTriangle(ctx, 34, 40, 20, 26, c.body, lighten(c.accent, 0.25), { lean: -0.5 });
-  earTriangle(ctx, 66, 40, 20, 26, c.body, lighten(c.accent, 0.25), { lean: 0.5 });
-
-  bodyBlob(ctx, 50, 60, 29, 28, c.body, { flat: 0.3 });
-  // Fuzzy chest tuft.
-  ctx.beginPath();
-  ctx.ellipse(50, 74, 15, 10, 0, 0, Math.PI * 2);
-  ctx.fillStyle = lighten(c.body, 0.22);
-  ctx.fill();
-
-  eye(ctx, 40, 56, 10, { blink, look, iris: c.iris, angry: 0.4, side: -1 });
-  eye(ctx, 61, 56, 10, { blink, look, iris: c.iris, angry: 0.4, side: 1 });
-  blush(ctx, 30, 66, 6.5);
-  blush(ctx, 71, 66, 6.5);
-  grin(ctx, 50, 70, 22, 6.5, { teeth: 3, fangs: true });
-  foot(ctx, 41, 90, 15, 10, darken(c.accent, 0.05));
-  foot(ctx, 60, 90, 15, 10, darken(c.accent, 0.05));
-
-  if (armored) helm(ctx, 50, 40, 44, 21);
-  if (elite) eliteBadge(ctx, 76, 30);
-}
-
-function shroomp(ctx, o) {
-  const { c, blink = 0, look = [0.1, 0.1], armored, elite } = o;
+  const { c, blink = 0, armored, elite } = o;
   groundShadow(ctx, 50, FEET, 30);
-  if (elite) eliteTrim(ctx, 50, 44, 36, c.accent);
 
-  // Stem (the body + face).
-  blobPath(ctx, 50, 74, 24, 24, { flat: 0.4 });
-  vinyl(ctx, '#fff2df', 50, 96);
-  ink(ctx, 3.2);
+  const shape = () => blobPath(ctx, 50, 62, 33, 31, { flat: 0.34 });
+  shape();
+  flat(ctx, c.body);
+  belly(ctx, shape, 50, 76, 20, 13, lighten(c.body, 0.14));
 
-  // Cap.
-  ctx.save();
+  // Antenna, drawn over the body so the stalk reads.
+  limb(ctx, 50, 34, 54, 20, 4.5, c.accent);
   ctx.beginPath();
-  ctx.moveTo(12, 52);
-  ctx.quadraticCurveTo(16, 16, 50, 16);
-  ctx.quadraticCurveTo(84, 16, 88, 52);
-  ctx.quadraticCurveTo(70, 60, 50, 60);
-  ctx.quadraticCurveTo(30, 60, 12, 52);
-  ctx.closePath();
-  vinyl(ctx, c.body, 16, 60);
-  ctx.save(); ctx.clip();
-  sheen(ctx, 32, 28, 26, 16, 0.5);
-  ctx.fillStyle = withAlpha('#fffaf0', 0.92);
-  for (const [x, y, r] of [[30, 36, 8], [55, 28, 10], [72, 42, 7], [45, 46, 5.5]]) {
-    ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.85, 0, 0, Math.PI * 2); ctx.fill();
-  }
-  ctx.restore();
-  ctx.beginPath();
-  ctx.moveTo(12, 52);
-  ctx.quadraticCurveTo(16, 16, 50, 16);
-  ctx.quadraticCurveTo(84, 16, 88, 52);
-  ctx.quadraticCurveTo(70, 60, 50, 60);
-  ctx.quadraticCurveTo(30, 60, 12, 52);
-  ctx.closePath();
-  ink(ctx, 3.2);
-  ctx.restore();
+  ctx.arc(55, 16, 6.5, 0, Math.PI * 2);
+  flat(ctx, lighten(c.accent, 0.18));
 
-  eye(ctx, 41, 70, 8.5, { blink, look, iris: c.iris, angry: 1, side: -1 });
-  eye(ctx, 60, 70, 8.5, { blink, look, iris: c.iris, angry: 1, side: 1 });
-  grin(ctx, 50, 82, 20, 6, { teeth: 4, tongue: false });
+  eye(ctx, 40, 58, 5.2, { blink });
+  eye(ctx, 61, 58, 5.2, { blink });
+  blush(ctx, 29, 68, 7);
+  blush(ctx, 72, 68, 7);
+  mouth(ctx, 50, 70, 13, { kind: 'w' });
 
-  if (armored) helm(ctx, 50, 24, 54, 23);
-  if (elite) eliteBadge(ctx, 82, 26);
-}
-
-function webble(ctx, o) {
-  const { c, blink = 0, look = [0.1, 0.1], armored, elite } = o;
-  groundShadow(ctx, 50, FEET, 34);
-  if (elite) eliteTrim(ctx, 50, 58, 32, c.accent);
-
-  // Six legs, arched.
-  for (const s of [-1, 1]) {
-    for (let i = 0; i < 3; i++) {
-      const sy = 52 + i * 11;
-      const ex = 50 + s * (34 + i * 5);
-      ctx.beginPath();
-      ctx.moveTo(50 + s * 20, sy);
-      ctx.quadraticCurveTo(50 + s * (36 + i * 6), sy - 12 + i * 5, ex, 88 - i * 2);
-      ctx.lineCap = 'round';
-      ctx.lineWidth = 8; ctx.strokeStyle = INK; ctx.stroke();
-      ctx.lineWidth = 4.6; ctx.strokeStyle = darken(c.accent, 0.05); ctx.stroke();
-    }
-  }
-
-  bodyBlob(ctx, 50, 62, 30, 29, c.body, { flat: 0.24 });
-
-  // Four eyes: two big, two small — creepy count, cute execution.
-  eye(ctx, 40, 56, 10, { blink, look, iris: c.iris, angry: 0.3, side: -1 });
-  eye(ctx, 61, 56, 10, { blink, look, iris: c.iris, angry: 0.3, side: 1 });
-  eye(ctx, 31, 68, 5.2, { blink, look, iris: c.iris, side: -1 });
-  eye(ctx, 70, 68, 5.2, { blink, look, iris: c.iris, side: 1 });
-  grin(ctx, 50, 74, 20, 6, { teeth: 4, fangs: true, tongue: false });
-
-  if (armored) helm(ctx, 50, 40, 48, 23);
+  if (armored) helm(ctx, 50, 34, 46, 21);
   if (elite) eliteBadge(ctx, 78, 32);
 }
 
-function boolie(ctx, o) {
-  const { c, blink = 0, look = [0.14, 0.06], armored, elite } = o;
-  groundShadow(ctx, 50, FEET, 24, 7, 0.13);
-  if (elite) eliteTrim(ctx, 50, 54, 32, c.accent);
+/** Shellby — a sleepy snail. Signature: the spiral shell. */
+function shellby(ctx, o) {
+  const { c, blink = 0, armored, elite } = o;
+  groundShadow(ctx, 50, FEET, 34);
 
-  // Ghost body: blob on top, scalloped hem at the bottom.
-  ctx.save();
+  // Slug body.
   ctx.beginPath();
-  ctx.moveTo(18, 62);
-  ctx.bezierCurveTo(18, 24, 82, 24, 82, 62);
-  ctx.lineTo(82, 76);
-  const lobes = 4, w = 64 / lobes;
-  for (let i = 0; i < lobes; i++) {
-    const x0 = 82 - i * w;
-    ctx.quadraticCurveTo(x0 - w * 0.5, 76 + (i % 2 ? 16 : 6), x0 - w, 76 + (i % 2 ? 2 : 10));
-  }
+  ctx.moveTo(14, 90);
+  ctx.quadraticCurveTo(10, 72, 34, 70);
+  ctx.lineTo(74, 70);
+  ctx.quadraticCurveTo(92, 72, 88, 90);
   ctx.closePath();
-  vinyl(ctx, c.body, 24, 90);
-  ctx.save(); ctx.clip(); sheen(ctx, 34, 40, 22, 20, 0.65); ctx.restore();
-  ctx.restore();
+  flat(ctx, lighten(c.body, 0.1));
 
+  // Head.
   ctx.beginPath();
-  ctx.moveTo(18, 62);
-  ctx.bezierCurveTo(18, 24, 82, 24, 82, 62);
-  ctx.lineTo(82, 76);
-  for (let i = 0; i < lobes; i++) {
-    const x0 = 82 - i * w;
-    ctx.quadraticCurveTo(x0 - w * 0.5, 76 + (i % 2 ? 16 : 6), x0 - w, 76 + (i % 2 ? 2 : 10));
+  ctx.ellipse(74, 72, 21, 19, 0, 0, Math.PI * 2);
+  flat(ctx, c.body);
+
+  // Shell — one clean spiral, the whole character in a single detail.
+  ctx.beginPath();
+  ctx.arc(38, 58, 26, 0, Math.PI * 2);
+  flat(ctx, c.accent);
+  ctx.beginPath();
+  for (let i = 0; i <= 70; i++) {
+    const t = i / 70, a = t * Math.PI * 3.2, r = 21 * (1 - t * 0.9);
+    ctx[i === 0 ? 'moveTo' : 'lineTo'](38 + Math.cos(a) * r, 58 + Math.sin(a) * r);
   }
-  ctx.closePath();
-  ink(ctx, 3.2);
+  ink(ctx, 2.6, darken(c.accent, 0.18));
 
-  eye(ctx, 39, 52, 10.5, { blink, look, iris: c.iris, angry: 0.6, side: -1 });
-  eye(ctx, 62, 52, 10.5, { blink, look, iris: c.iris, angry: 0.6, side: 1 });
-  blush(ctx, 28, 64, 6.5, '#b6a4ff', 0.45);
-  blush(ctx, 73, 64, 6.5, '#b6a4ff', 0.45);
-  grin(ctx, 50, 68, 24, 8, { teeth: 4, fangs: true });
+  // Eye stalks. The eye sits in a pale bulb at the tip, otherwise it vanishes
+  // into the stalk at gameplay size.
+  limb(ctx, 70, 60, 67, 42, 4, c.body);
+  limb(ctx, 82, 60, 87, 44, 4, c.body);
+  for (const [ex, ey] of [[67, 38], [87, 40]]) {
+    ctx.beginPath();
+    ctx.arc(ex, ey, 7, 0, Math.PI * 2);
+    flat(ctx, lighten(c.body, 0.24));
+    eye(ctx, ex, ey, 4, { blink });
+  }
 
-  if (armored) helm(ctx, 50, 36, 46, 22);
-  if (elite) eliteBadge(ctx, 78, 28);
+  blush(ctx, 64, 78, 6);
+  mouth(ctx, 76, 78, 10, { kind: 'line' });
+
+  if (armored) helm(ctx, 74, 56, 30, 15);
+  if (elite) eliteBadge(ctx, 18, 30);
 }
 
-function hornlet(ctx, o) {
-  const { c, blink = 0, look = [0.12, 0.1], armored, elite } = o;
-  groundShadow(ctx, 50, FEET, 28);
-  if (elite) eliteTrim(ctx, 50, 50, 32, c.accent);
+/** Flitter — a chubby bat. Signature: big round ears and little wings. */
+function flitter(ctx, o) {
+  const { c, blink = 0, armored, elite } = o;
+  groundShadow(ctx, 50, FEET, 26, 8, 0.13);
 
-  tail(ctx, 68, 82, 20, c.accent, 1);
-
-  // Small torso, big head — classic chibi ratio.
-  blobPath(ctx, 50, 80, 20, 17, { flat: 0.35 });
-  ctx.fillStyle = c.accent; ctx.fill(); ink(ctx, 3);
-  foot(ctx, 40, 93, 15, 9, darken(c.accent, 0.1));
-  foot(ctx, 61, 93, 15, 9, darken(c.accent, 0.1));
-  limb(ctx, 33, 76, 24, 84, 6, c.body);
-  limb(ctx, 68, 76, 77, 84, 6, c.body);
-
-  horn(ctx, 33, 34, 13, 20, '#fff0d0', { curve: -0.35 });
-  horn(ctx, 67, 34, 13, 20, '#fff0d0', { curve: 0.35 });
-  earTriangle(ctx, 27, 52, 15, 16, c.body, lighten(c.body, 0.25), { lean: -0.8 });
-  earTriangle(ctx, 73, 52, 15, 16, c.body, lighten(c.body, 0.25), { lean: 0.8 });
-
-  bodyBlob(ctx, 50, 50, 26, 24, c.body, { flat: 0.14 });
-
-  eye(ctx, 41, 47, 9, { blink, look, iris: c.iris, angry: 1, side: -1 });
-  eye(ctx, 60, 47, 9, { blink, look, iris: c.iris, angry: 1, side: 1 });
-  blush(ctx, 31, 57, 6);
-  blush(ctx, 70, 57, 6);
-  grin(ctx, 50, 60, 21, 6.5, { teeth: 4, fangs: true });
-
-  if (armored) helm(ctx, 50, 28, 42, 20);
-  if (elite) eliteBadge(ctx, 80, 26);
-}
-
-function rumble(ctx, o) {
-  const { c, blink = 0, look = [0.08, 0.1], armored, elite } = o;
-  groundShadow(ctx, 50, FEET, 36);
-  if (elite) eliteTrim(ctx, 50, 58, 34, c.accent);
-
-  // Chunky rounded slab body with rock shards.
-  roundRectPath(ctx, 18, 36, 64, 56, 20);
-  vinyl(ctx, c.body, 36, 92);
-  ctx.save();
-  roundRectPath(ctx, 18, 36, 64, 56, 20);
-  ctx.clip();
-  sheen(ctx, 34, 48, 22, 16, 0.42);
-  ctx.fillStyle = withAlpha(darken(c.body, 0.16), 0.85);
-  for (const [x, y, s] of [[28, 78, 9], [64, 72, 11], [44, 86, 7]]) {
+  // Wings, behind.
+  for (const s of [-1, 1]) {
     ctx.beginPath();
-    ctx.moveTo(x - s, y + s * 0.6); ctx.lineTo(x, y - s * 0.8);
-    ctx.lineTo(x + s, y + s * 0.5); ctx.closePath(); ctx.fill();
-  }
-  ctx.restore();
-  roundRectPath(ctx, 18, 36, 64, 56, 20);
-  ink(ctx, 3.4);
-
-  // Shoulder crags.
-  for (const [x, y, s, r] of [[20, 42, 12, -0.4], [80, 40, 13, 0.4]]) {
-    ctx.beginPath();
-    ctx.moveTo(x - s * 0.7, y + s * 0.5);
-    ctx.quadraticCurveTo(x + r * s, y - s, x + s * 0.7, y + s * 0.4);
+    ctx.moveTo(50 + s * 20, 54);
+    ctx.quadraticCurveTo(50 + s * 48, 34, 50 + s * 44, 62);
+    ctx.quadraticCurveTo(50 + s * 34, 54, 50 + s * 22, 68);
     ctx.closePath();
-    ctx.fillStyle = lighten(c.accent, 0.1); ctx.fill(); ink(ctx, 2.8);
+    flat(ctx, darken(c.accent, 0.04));
   }
 
-  // Glowing eyes — the menace here is "ancient thing waking up".
-  for (const [x, side] of [[38, -1], [62, 1]]) {
-    aura(ctx, x, 56, 13, '#ffd166', 0.7);
-    eye(ctx, x, 56, 9, { blink, look, iris: '#e08a2e', scleraColor: '#fff3d0', angry: 1, side });
-  }
-  grin(ctx, 50, 74, 26, 6.5, { teeth: 5, fangs: false, tongue: false });
+  earRound(ctx, 32, 40, 12, c.body, lighten(c.body, 0.24));
+  earRound(ctx, 68, 40, 12, c.body, lighten(c.body, 0.24));
 
-  if (armored) helm(ctx, 50, 40, 52, 24);
+  const shape = () => eggPath(ctx, 50, 62, 28, 30, { taper: 0.18, flat: 0.34 });
+  shape();
+  flat(ctx, c.body);
+  belly(ctx, shape, 50, 76, 16, 12, lighten(c.body, 0.2));
+
+  eye(ctx, 41, 58, 5, { blink });
+  eye(ctx, 60, 58, 5, { blink });
+  blush(ctx, 31, 67, 6.5);
+  blush(ctx, 70, 67, 6.5);
+  mouth(ctx, 50, 69, 12, { kind: 'fang' });
+
+  foot(ctx, 41, 92, 14, 9, darken(c.accent, 0.02));
+  foot(ctx, 60, 92, 14, 9, darken(c.accent, 0.02));
+
+  if (armored) helm(ctx, 50, 38, 42, 20);
+  if (elite) eliteBadge(ctx, 78, 30);
+}
+
+/** Shroomp — a mushroom. Signature: the spotted cap. */
+function shroomp(ctx, o) {
+  const { c, blink = 0, armored, elite } = o;
+  groundShadow(ctx, 50, FEET, 30);
+
+  // Stem, which carries the face.
+  ctx.beginPath();
+  ctx.moveTo(32, 92);
+  ctx.quadraticCurveTo(30, 60, 38, 54);
+  ctx.lineTo(62, 54);
+  ctx.quadraticCurveTo(70, 60, 68, 92);
+  ctx.quadraticCurveTo(50, 96, 32, 92);
+  ctx.closePath();
+  flat(ctx, '#fdf3e2');
+
+  // Cap.
+  const cap = () => {
+    ctx.beginPath();
+    ctx.moveTo(13, 54);
+    ctx.quadraticCurveTo(16, 18, 50, 18);
+    ctx.quadraticCurveTo(84, 18, 87, 54);
+    ctx.quadraticCurveTo(50, 62, 13, 54);
+    ctx.closePath();
+  };
+  cap();
+  flat(ctx, c.body);
+  ctx.save();
+  cap();
+  ctx.clip();
+  for (const [x, y, r] of [[29, 38, 8], [55, 29, 9.5], [71, 44, 7]]) {
+    ctx.beginPath();
+    ctx.ellipse(x, y, r, r * 0.86, 0, 0, Math.PI * 2);
+    fill(ctx, '#fff6ea');
+  }
+  ctx.restore();
+  cap();
+  ink(ctx);
+
+  eye(ctx, 42, 70, 4.8, { blink });
+  eye(ctx, 59, 70, 4.8, { blink });
+  blush(ctx, 34, 78, 6);
+  blush(ctx, 67, 78, 6);
+  mouth(ctx, 50, 79, 11, { kind: 'line' });
+
+  if (armored) helm(ctx, 50, 22, 50, 22);
+  if (elite) eliteBadge(ctx, 84, 26);
+}
+
+/** Webble — a round spider. Signature: simple arched legs and four eyes. */
+function webble(ctx, o) {
+  const { c, blink = 0, armored, elite } = o;
+  groundShadow(ctx, 50, FEET, 32);
+
+  for (const s of [-1, 1]) {
+    for (let i = 0; i < 3; i++) {
+      const sy = 56 + i * 10;
+      ctx.beginPath();
+      ctx.moveTo(50 + s * 24, sy);
+      ctx.quadraticCurveTo(50 + s * (44 + i * 4), sy - 6 + i * 3, 50 + s * (38 + i * 4), 92 - i * 4);
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 7.5;
+      ctx.strokeStyle = INK;
+      ctx.stroke();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = darken(c.accent, 0.04);
+      ctx.stroke();
+    }
+  }
+
+  body(ctx, 50, 62, 29, 28, c.body, { flat: 0.26 });
+
+  eye(ctx, 41, 58, 5, { blink });
+  eye(ctx, 60, 58, 5, { blink });
+  eye(ctx, 33, 68, 3, { blink });
+  eye(ctx, 68, 68, 3, { blink });
+  blush(ctx, 27, 64, 5.5);
+  blush(ctx, 74, 64, 5.5);
+  mouth(ctx, 50, 72, 11, { kind: 'w' });
+
+  if (armored) helm(ctx, 50, 38, 44, 21);
+  if (elite) eliteBadge(ctx, 80, 32);
+}
+
+/** Boolie — a little ghost. Signature: the scalloped hem. */
+function boolie(ctx, o) {
+  const { c, blink = 0, armored, elite } = o;
+  groundShadow(ctx, 50, FEET, 24, 7, 0.1);
+
+  ctx.beginPath();
+  ctx.moveTo(19, 64);
+  ctx.bezierCurveTo(19, 24, 81, 24, 81, 64);
+  ctx.lineTo(81, 80);
+  // Even scallops along the hem: each lobe dips to the same depth, so the
+  // silhouette reads as a ghost's ruffle rather than a single torn notch.
+  const lobes = 3, w = 62 / lobes;
+  for (let i = 0; i < lobes; i++) {
+    const x0 = 81 - i * w;
+    ctx.quadraticCurveTo(x0 - w * 0.5, 92, x0 - w, 80);
+  }
+  ctx.closePath();
+  flat(ctx, c.body);
+
+  eye(ctx, 40, 56, 5.2, { blink });
+  eye(ctx, 61, 56, 5.2, { blink });
+  blush(ctx, 29, 65, 6.5, '#b9a8e0', 0.5);
+  blush(ctx, 72, 65, 6.5, '#b9a8e0', 0.5);
+  mouth(ctx, 50, 67, 10, { kind: 'o' });
+
+  if (armored) helm(ctx, 50, 36, 42, 20);
+  if (elite) eliteBadge(ctx, 80, 30);
+}
+
+/** Hornlet — a small imp. Signature: two horns and a curly tail. */
+function hornlet(ctx, o) {
+  const { c, blink = 0, armored, elite } = o;
+  groundShadow(ctx, 50, FEET, 28);
+
+  tail(ctx, 70, 80, 18, c.accent, 1);
+
+  const shape = () => eggPath(ctx, 50, 62, 27, 31, { taper: 0.2, flat: 0.34 });
+  shape();
+  flat(ctx, c.body);
+  belly(ctx, shape, 50, 76, 16, 12, lighten(c.body, 0.2));
+
+  horn(ctx, 34, 36, 11, 17, '#fff0d6', { curve: -0.35 });
+  horn(ctx, 66, 36, 11, 17, '#fff0d6', { curve: 0.35 });
+  earTriangle(ctx, 26, 54, 13, 14, c.body, lighten(c.body, 0.24), { lean: -0.8 });
+  earTriangle(ctx, 74, 54, 13, 14, c.body, lighten(c.body, 0.24), { lean: 0.8 });
+
+  nub(ctx, 26, 70, 7, c.body, -1);
+  nub(ctx, 74, 70, 7, c.body, 1);
+  foot(ctx, 41, 92, 14, 9, darken(c.accent, 0.04));
+  foot(ctx, 60, 92, 14, 9, darken(c.accent, 0.04));
+
+  eye(ctx, 41, 58, 5, { blink });
+  eye(ctx, 60, 58, 5, { blink });
+  blush(ctx, 31, 67, 6.5);
+  blush(ctx, 70, 67, 6.5);
+  mouth(ctx, 50, 69, 12, { kind: 'fang' });
+
+  if (armored) helm(ctx, 50, 34, 40, 19);
   if (elite) eliteBadge(ctx, 82, 30);
 }
 
-function dragon(ctx, o) {
-  const { c, blink = 0, look = [0.12, 0.08], elite } = o;
-  groundShadow(ctx, 50, FEET, 42, 12, 0.26);
-  aura(ctx, 50, 54, 48, c.accent, elite ? 0.6 : 0.4);
+/** Rumble — a rounded rock creature. Signature: chunky body and sleepy eyes. */
+function rumble(ctx, o) {
+  const { c, blink = 0, armored, elite } = o;
+  groundShadow(ctx, 50, FEET, 34);
 
-  // Wings.
-  for (const s of [-1, 1]) {
-    ctx.save();
+  const slab = () => roundRectPath(ctx, 19, 38, 62, 56, 22);
+  slab();
+  flat(ctx, c.body);
+
+  // A couple of flat facets — the only "texture" this style allows.
+  ctx.save();
+  slab();
+  ctx.clip();
+  for (const tri of [[[24, 88], [36, 72], [48, 88]], [[56, 90], [70, 70], [82, 90]]]) {
     ctx.beginPath();
-    ctx.moveTo(50 + s * 24, 46);
-    ctx.quadraticCurveTo(50 + s * 62, 8, 50 + s * 54, 44);
-    ctx.quadraticCurveTo(50 + s * 48, 34, 50 + s * 44, 52);
-    ctx.quadraticCurveTo(50 + s * 36, 42, 50 + s * 26, 58);
+    ctx.moveTo(tri[0][0], tri[0][1]);
+    ctx.lineTo(tri[1][0], tri[1][1]);
+    ctx.lineTo(tri[2][0], tri[2][1]);
     ctx.closePath();
-    ctx.fillStyle = darken(c.accent, 0.1);
-    ctx.fill();
-    ink(ctx, 3);
+    fill(ctx, darken(c.body, 0.08));
+  }
+  ctx.restore();
+  slab();
+  ink(ctx);
+
+  // Shoulder crags.
+  ctx.beginPath();
+  ctx.moveTo(16, 46);
+  ctx.quadraticCurveTo(20, 32, 30, 42);
+  ctx.closePath();
+  flat(ctx, lighten(c.accent, 0.12));
+  ctx.beginPath();
+  ctx.moveTo(84, 44);
+  ctx.quadraticCurveTo(80, 30, 70, 40);
+  ctx.closePath();
+  flat(ctx, lighten(c.accent, 0.12));
+
+  eye(ctx, 39, 58, 5.2, { kind: 'sleepy', blink });
+  eye(ctx, 62, 58, 5.2, { kind: 'sleepy', blink });
+  blush(ctx, 29, 68, 6);
+  blush(ctx, 72, 68, 6);
+  mouth(ctx, 50, 70, 13, { kind: 'line' });
+
+  if (armored) helm(ctx, 50, 38, 48, 22);
+  if (elite) eliteBadge(ctx, 84, 32);
+}
+
+/**
+ * The boss. A plump dragon in the same language as everything else — bigger and
+ * spikier, but never frightening. A boss should feel like an event, not a threat.
+ */
+function dragon(ctx, o) {
+  const { c, blink = 0, elite } = o;
+  groundShadow(ctx, 50, FEET, 40, 11, 0.2);
+  if (elite) aura(ctx, 50, 58, 46, c.accent, 0.35);
+
+  // Tail, curling out to the right.
+  ctx.beginPath();
+  ctx.moveTo(66, 84);
+  ctx.quadraticCurveTo(94, 88, 90, 64);
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 15;
+  ctx.strokeStyle = INK;
+  ctx.stroke();
+  ctx.lineWidth = 11;
+  ctx.strokeStyle = c.body;
+  ctx.stroke();
+
+  // Back spikes, placed ON the body contour and rotated to point outward, so
+  // they break the silhouette instead of hiding underneath it.
+  const cx = 50, cy = 62, rx = 31, ry = 34;
+  for (const deg of [-8, 18, 44, 68]) {
+    const a = (deg * Math.PI) / 180;
+    const x = cx + Math.sin(a) * rx;
+    const y = cy - Math.cos(a) * ry;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(a);
+    ctx.beginPath();
+    ctx.moveTo(-8, 3);
+    ctx.quadraticCurveTo(0, -11, 8, 3);
+    ctx.closePath();
+    flat(ctx, lighten(c.accent, 0.24));
     ctx.restore();
   }
 
-  // Tail + body.
-  ctx.beginPath();
-  ctx.moveTo(62, 82);
-  ctx.quadraticCurveTo(92, 84, 88, 62);
-  ctx.lineWidth = 13; ctx.strokeStyle = INK; ctx.lineCap = 'round'; ctx.stroke();
-  ctx.lineWidth = 9; ctx.strokeStyle = c.body; ctx.stroke();
+  const shape = () => eggPath(ctx, cx, cy, rx, ry, { taper: 0.16, flat: 0.34 });
+  shape();
+  flat(ctx, c.body);
+  belly(ctx, shape, 50, 76, 19, 15, lighten(c.body, 0.24));
 
-  blobPath(ctx, 50, 76, 26, 21, { flat: 0.32 });
-  vinyl(ctx, c.body, 55, 97); ink(ctx, 3.2);
-  ctx.beginPath();
-  ctx.ellipse(50, 80, 15, 11, 0, 0, Math.PI * 2);
-  ctx.fillStyle = lighten(c.body, 0.28); ctx.fill();
+  nub(ctx, 23, 68, 8, c.body, -1);
+  nub(ctx, 77, 68, 8, c.body, 1);
+  foot(ctx, 39, 93, 17, 10, darken(c.accent, 0.04));
+  foot(ctx, 61, 93, 17, 10, darken(c.accent, 0.04));
 
-  // Head.
-  horn(ctx, 31, 30, 14, 22, '#fff0d0', { curve: -0.4 });
-  horn(ctx, 69, 30, 14, 22, '#fff0d0', { curve: 0.4 });
-  bodyBlob(ctx, 50, 44, 30, 27, c.body, { flat: 0.1 });
-
-  // Snout with a mouthful of teeth.
-  blobPath(ctx, 50, 58, 20, 12, { flat: 0.2 });
-  ctx.fillStyle = lighten(c.body, 0.16); ctx.fill(); ink(ctx, 2.8);
-  ctx.fillStyle = INK;
-  ctx.beginPath(); ctx.ellipse(44, 54, 2.2, 1.6, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(56, 54, 2.2, 1.6, 0, 0, Math.PI * 2); ctx.fill();
-  grin(ctx, 50, 61, 26, 8, { teeth: 6, fangs: true });
-
-  eye(ctx, 39, 40, 10, { blink, look, iris: '#ffd166', scleraColor: '#fff6e0', angry: 1.2, side: -1 });
-  eye(ctx, 62, 40, 10, { blink, look, iris: '#ffd166', scleraColor: '#fff6e0', angry: 1.2, side: 1 });
-
-  // Back spines.
-  for (let i = 0; i < 3; i++) {
-    const x = 62 + i * 9, y = 74 - i * 3;
-    ctx.beginPath();
-    ctx.moveTo(x - 5, y + 5); ctx.lineTo(x, y - 7); ctx.lineTo(x + 5, y + 5);
-    ctx.closePath();
-    ctx.fillStyle = lighten(c.accent, 0.2); ctx.fill(); ink(ctx, 2.2);
-  }
+  eye(ctx, 40, 56, 6.4, { blink });
+  eye(ctx, 61, 56, 6.4, { blink });
+  blush(ctx, 28, 66, 8);
+  blush(ctx, 73, 66, 8);
+  mouth(ctx, 50, 68, 16, { kind: 'fang' });
 }
 
 // ----------------------------------------------------------------------- hero
 
 /**
  * The player's champion. `tier` 0..6 tracks the grade band, so the hero visibly
- * grows in power right alongside the maths.
+ * grows in power across the whole game while staying the same friendly shape.
  */
 function hero(ctx, o) {
-  const { tier = 0, blink = 0, look = [0.12, 0.06], cheer = 0, cast = 0 } = o;
+  const { tier = 0, blink = 0, cheer = 0, cast = 0 } = o;
   const t = HERO_TIERS[Math.max(0, Math.min(HERO_TIERS.length - 1, tier))];
-  groundShadow(ctx, 50, FEET, 28);
-  if (t.aura) aura(ctx, 50, 56, 46, t.aura, 0.5);
+  groundShadow(ctx, 50, FEET, 27);
+  if (t.aura) aura(ctx, 50, 56, 44, t.aura, 0.38);
 
   if (t.wings) {
     for (const s of [-1, 1]) {
-      ctx.save();
       ctx.beginPath();
       ctx.moveTo(50 + s * 20, 58);
-      ctx.quadraticCurveTo(50 + s * 54, 26, 50 + s * 40, 62);
-      ctx.quadraticCurveTo(50 + s * 34, 52, 50 + s * 20, 68);
+      ctx.quadraticCurveTo(50 + s * 50, 30, 50 + s * 38, 62);
+      ctx.quadraticCurveTo(50 + s * 32, 54, 50 + s * 20, 68);
       ctx.closePath();
-      ctx.fillStyle = withAlpha('#ffffff', 0.9); ctx.fill(); ink(ctx, 2.6);
-      ctx.restore();
+      flat(ctx, '#fffdf6');
     }
   }
 
   if (t.cape) {
+    // Drawn wide and from shoulder height, otherwise the robe hides it entirely
+    // and the tier reads as identical to the one before.
     ctx.beginPath();
-    ctx.moveTo(34, 58);
-    ctx.quadraticCurveTo(20, 78, 26, 92);
-    ctx.quadraticCurveTo(50, 84, 74, 92);
-    ctx.quadraticCurveTo(80, 78, 66, 58);
+    ctx.moveTo(36, 54);
+    ctx.quadraticCurveTo(17, 76, 22, 92);
+    ctx.quadraticCurveTo(50, 84, 78, 92);
+    ctx.quadraticCurveTo(83, 76, 64, 54);
     ctx.closePath();
-    vinyl(ctx, t.cape, 58, 92); ink(ctx, 3);
+    flat(ctx, t.cape);
   }
 
-  // Legs + boots.
-  limb(ctx, 43, 84, 41, 91, 7, HERO.robeAlt);
-  limb(ctx, 57, 84, 59, 91, 7, HERO.robeAlt);
-  foot(ctx, 40, 93, 16, 9, '#6b4a3a');
-  foot(ctx, 60, 93, 16, 9, '#6b4a3a');
+  // Legs and boots.
+  limb(ctx, 43, 84, 42, 90, 6.5, HERO.robeAlt);
+  limb(ctx, 57, 84, 58, 90, 6.5, HERO.robeAlt);
+  foot(ctx, 41, 92, 15, 9, '#7a5a44');
+  foot(ctx, 59, 92, 15, 9, '#7a5a44');
 
   // Robe.
   ctx.beginPath();
   ctx.moveTo(36, 60);
-  ctx.quadraticCurveTo(30, 80, 33, 88);
-  ctx.quadraticCurveTo(50, 93, 67, 88);
+  ctx.quadraticCurveTo(30, 80, 34, 88);
+  ctx.quadraticCurveTo(50, 92, 66, 88);
   ctx.quadraticCurveTo(70, 80, 64, 60);
   ctx.closePath();
-  vinyl(ctx, HERO.robe, 60, 90); ink(ctx, 3.2);
+  flat(ctx, HERO.robe);
 
   // Staff arm.
-  const sx = 74 + cast * 3, sy = 44 - cast * 6;
-  limb(ctx, 66, 68, sx - 2, sy + 22, 6.5, HERO.skin);
+  const sx = 74 + cast * 3, sy = 46 - cast * 6;
+  limb(ctx, 66, 68, sx - 2, sy + 22, 6, HERO.skin);
   ctx.beginPath();
-  ctx.moveTo(sx, sy + 44); ctx.lineTo(sx + 2, sy + 4);
-  ctx.lineWidth = 8; ctx.strokeStyle = INK; ctx.lineCap = 'round'; ctx.stroke();
-  ctx.lineWidth = 4.6; ctx.strokeStyle = HERO.staff; ctx.stroke();
-  aura(ctx, sx + 2, sy, 13 + cast * 6, t.gem, 0.8);
-  ctx.beginPath(); ctx.arc(sx + 2, sy, 7, 0, Math.PI * 2);
-  ctx.fillStyle = t.gem; ctx.fill(); ink(ctx, 2.4);
+  ctx.moveTo(sx, sy + 44);
+  ctx.lineTo(sx + 2, sy + 4);
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 7.5;
+  ctx.strokeStyle = INK;
+  ctx.stroke();
+  ctx.lineWidth = 4.4;
+  ctx.strokeStyle = HERO.staff;
+  ctx.stroke();
+  aura(ctx, sx + 2, sy, 12 + cast * 6, t.gem, 0.7);
+  ctx.beginPath();
+  ctx.arc(sx + 2, sy, 6.5, 0, Math.PI * 2);
+  flat(ctx, t.gem);
 
-  // Free arm (raised when cheering).
-  limb(ctx, 34, 68, cheer > 0 ? 22 : 26, cheer > 0 ? 50 : 80, 6.5, HERO.skin);
+  // Free arm, raised when cheering.
+  limb(ctx, 34, 68, cheer > 0 ? 23 : 27, cheer > 0 ? 52 : 80, 6, HERO.skin);
 
   // Head.
-  bodyBlob(ctx, 50, 42, 25, 24, HERO.skin, { flat: 0.06, lw: 3 });
-  // Hair fringe.
+  ctx.beginPath();
+  ctx.ellipse(50, 44, 24, 23, 0, 0, Math.PI * 2);
+  flat(ctx, HERO.skin);
+
+  // Hair fringe, clipped to the head.
   ctx.save();
-  blobPath(ctx, 50, 42, 25, 24, { flat: 0.06 });
+  ctx.beginPath();
+  ctx.ellipse(50, 44, 24, 23, 0, 0, Math.PI * 2);
   ctx.clip();
   ctx.beginPath();
-  ctx.moveTo(24, 34);
-  ctx.quadraticCurveTo(34, 16, 50, 18);
-  ctx.quadraticCurveTo(68, 16, 76, 34);
-  ctx.quadraticCurveTo(64, 26, 50, 30);
-  ctx.quadraticCurveTo(36, 26, 24, 34);
+  ctx.moveTo(24, 38);
+  ctx.quadraticCurveTo(32, 18, 50, 20);
+  ctx.quadraticCurveTo(68, 18, 76, 38);
+  ctx.quadraticCurveTo(64, 29, 50, 32);
+  ctx.quadraticCurveTo(36, 29, 24, 38);
   ctx.closePath();
-  ctx.fillStyle = HERO.hair; ctx.fill();
+  fill(ctx, HERO.hair);
   ctx.restore();
 
-  eye(ctx, 41, 43, 8.5, { blink, look, iris: '#3b2a5c', side: -1 });
-  eye(ctx, 59, 43, 8.5, { blink, look, iris: '#3b2a5c', side: 1 });
-  blush(ctx, 31, 51, 6.5);
-  blush(ctx, 69, 51, 6.5);
-  smile(ctx, 50, 53, 13, cheer > 0 ? 9 : 6);
+  eye(ctx, 42, 46, 5.6, { blink });
+  eye(ctx, 59, 46, 5.6, { blink });
+  blush(ctx, 32, 54, 7);
+  blush(ctx, 69, 54, 7);
+  mouth(ctx, 50, 55, cheer > 0 ? 13 : 11, { kind: cheer > 0 ? 'wide' : 'smile' });
 
-  // Hat (or crown at high tiers, worn over the hat).
+  // Hat.
   ctx.beginPath();
-  ctx.moveTo(24, 28);
-  ctx.quadraticCurveTo(50, 34, 76, 28);
-  ctx.quadraticCurveTo(66, 6, 50, 4);
-  ctx.quadraticCurveTo(34, 6, 24, 28);
+  ctx.moveTo(25, 30);
+  ctx.quadraticCurveTo(50, 36, 75, 30);
+  ctx.quadraticCurveTo(66, 8, 50, 6);
+  ctx.quadraticCurveTo(34, 8, 25, 30);
   ctx.closePath();
-  vinyl(ctx, t.hat, 4, 30); ink(ctx, 3);
+  flat(ctx, t.hat);
   ctx.beginPath();
-  ctx.ellipse(50, 28, 27, 6, 0, 0, Math.PI * 2);
-  ctx.fillStyle = darken(t.hat, 0.12); ctx.fill(); ink(ctx, 2.8);
-  fiveStar(ctx, 50, 16, 6.5, t.gem);
+  ctx.ellipse(50, 30, 26, 5.5, 0, 0, Math.PI * 2);
+  flat(ctx, darken(t.hat, 0.14));
+  fiveStar(ctx, 50, 17, 6, t.gem);
 
   if (t.crown) {
     ctx.beginPath();
-    ctx.moveTo(34, 12); ctx.lineTo(38, 2); ctx.lineTo(44, 9);
-    ctx.lineTo(50, -2); ctx.lineTo(56, 9); ctx.lineTo(62, 2); ctx.lineTo(66, 12);
+    ctx.moveTo(36, 12);
+    ctx.lineTo(40, 3);
+    ctx.lineTo(45, 9);
+    ctx.lineTo(50, 0);
+    ctx.lineTo(55, 9);
+    ctx.lineTo(60, 3);
+    ctx.lineTo(64, 12);
     ctx.closePath();
-    ctx.fillStyle = '#ffd34e'; ctx.fill(); ink(ctx, 2.4);
+    flat(ctx, '#ffd34e');
   }
 }
 

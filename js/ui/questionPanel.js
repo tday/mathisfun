@@ -3,7 +3,7 @@
 // Real DOM rather than canvas-drawn buttons — that buys us focus rings, screen
 // reader labels, crisp text at any DPR and native-sized touch targets for free.
 
-import { el, clear, announce } from './dom.js';
+import { el, clear, announce, spriteImg } from './dom.js';
 import { drawQuestionVisual, drawShapePath } from '../gfx/fx.js';
 import { ink } from '../gfx/toybox.js';
 
@@ -39,9 +39,20 @@ export class QuestionPanel {
     this.locked = false;
     this.tries = 0;
 
-    this.promptEl.textContent = question.prompt || '';
+    clear(this.promptEl);
+    // A drawn chip in front of the prompt carries direction (more / fewer) for
+    // children who cannot yet read the word that distinguishes them.
+    if (question.promptIcon) {
+      const size = 40;
+      const img = spriteImg(this.game.sprites.prop(question.promptIcon, size), size);
+      img.style.verticalAlign = 'middle';
+      img.style.marginRight = '10px';
+      img.style.display = 'inline-block';
+      this.promptEl.append(img);
+    }
+    if (question.prompt) this.promptEl.append(document.createTextNode(question.prompt));
     this.promptEl.classList.toggle('small', (question.prompt || '').length > 18);
-    this.promptEl.hidden = !question.prompt;
+    this.promptEl.hidden = !question.prompt && !question.promptIcon;
 
     this.visualCanvas.hidden = !question.visual;
     this._paintVisual();

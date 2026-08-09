@@ -30,7 +30,7 @@ export const EARLY = {
       answerValue: n,
       min: 0,
       distractors: countSlips(rng, n, 0),
-      hint: 'Touch each one as you count: 1, 2, 3…',
+      hint: 'Point to each one. Count 1, 2, 3…',
       explain: `There are ${n}.`,
     };
   },
@@ -43,30 +43,35 @@ export const EARLY = {
     const choiceDraw = {};
     for (const s of [target, ...others]) choiceDraw[SHAPE_NAMES[s]] = { kind: 'shape', shape: s };
     return {
-      prompt: 'Find the shape that matches!',
+      prompt: 'Which one matches?',
       visual: { kind: 'shape', shape: target, color: '#ffd34e' },
       answer: SHAPE_NAMES[target],
       distractors: others.map((s) => SHAPE_NAMES[s]),
       choiceDraw,
-      hint: 'Look at the picture. Which one has the same shape?',
+      hint: 'Look at the picture. Find the same shape.',
       explain: `That shape is a ${SHAPE_NAMES[target].toLowerCase()}.`,
     };
   },
 
   count_next(rng, p) {
     const max = Math.max(3, Math.min(20, p.max ?? 6));
-    const n = num(rng, 1, max - 1);
-    const back = rng() < 0.3 && n > 1;
+    const n = num(rng, 2, max - 1);
+    const back = rng() < 0.35 && n > 2;
     const answer = back ? n - 1 : n + 1;
+    // The track shows the run of numbers with a gap where the answer goes, so
+    // the question works without reading the words "before" or "after".
+    const cells = back
+      ? [null, n, n + 1, n + 2]
+      : [n - 2, n - 1, n, null];
     return {
-      prompt: back ? `What comes just before ${n}?` : `What comes just after ${n}?`,
-      visual: { kind: 'numberLine', min: Math.max(0, n - 4), max: n + 4, marks: [{ at: n, label: '?', color: '#ff7ab8' }] },
+      prompt: 'What goes here?',
+      visual: { kind: 'numberTrack', cells, dir: back ? 'back' : 'fwd' },
       answer,
       answerValue: answer,
       min: 0,
       distractors: countSlips(rng, answer, 0),
       hint: back ? 'Count backwards one step.' : 'Count on one more.',
-      explain: `${back ? 'Before' : 'After'} ${n} comes ${answer}.`,
+      explain: `${cells.map((c) => (c === null ? answer : c)).join(', ')}`,
     };
   },
 
@@ -77,10 +82,11 @@ export const EARLY = {
     const b = a + gap;
     const flip = rng() < 0.5;
     const sprite = pick(rng, COUNTABLES);
-    const more = rng() < 0.65;
+    const more = p.bothWays ? rng() < 0.6 : true;
     const answer = more ? b : a;
     return {
-      prompt: more ? 'Which group has MORE?' : 'Which group has FEWER?',
+      prompt: more ? 'Which has MORE?' : 'Which has FEWER?',
+      promptIcon: more ? 'iconMore' : 'iconFewer',
       visual: {
         kind: 'compareGroups',
         left: { sprite, count: flip ? b : a },
@@ -90,7 +96,7 @@ export const EARLY = {
       answerValue: answer,
       distractors: [more ? a : b],
       choiceCount: 2,
-      hint: 'Count each group, then compare the numbers.',
+      hint: 'Count each side. Which side has more?',
       explain: `${a} and ${b}: ${answer} is ${more ? 'more' : 'fewer'}.`,
     };
   },
@@ -102,10 +108,11 @@ export const EARLY = {
       const v = num(rng, 1, max);
       if (!set.includes(v)) set.push(v);
     }
-    const biggest = rng() < 0.6;
+    const biggest = p.bothWays ? rng() < 0.6 : true;
     const answer = biggest ? Math.max(...set) : Math.min(...set);
     return {
-      prompt: biggest ? 'Tap the BIGGEST number' : 'Tap the SMALLEST number',
+      prompt: biggest ? 'Which is BIGGEST?' : 'Which is SMALLEST?',
+      promptIcon: biggest ? 'iconMore' : 'iconFewer',
       visual: null,
       answer,
       answerValue: answer,
@@ -128,7 +135,7 @@ export const EARLY = {
       answerValue: n,
       min: 0,
       distractors: countSlips(rng, n, 0),
-      hint: n > 5 ? 'The top row is 5. Count on from there!' : 'Count the dots one by one.',
+      hint: n > 5 ? 'The top row is 5. Count on from there.' : 'Count the dots one by one.',
       explain: `That is ${n} dots.`,
     };
   },
@@ -137,8 +144,9 @@ export const EARLY = {
     const max = Math.max(5, Math.min(20, p.max ?? 10));
     const n = num(rng, 1, max);
     return {
-      prompt: `Tap the number ${numberWord(n)}`,
-      visual: { kind: 'tenFrame', count: n },
+      // The word form would need reading, so the picture asks the question.
+      prompt: 'How many?',
+      visual: { kind: 'countRow', sprite: pick(rng, COUNTABLES), count: n },
       answer: n,
       answerValue: n,
       min: 0,
@@ -190,14 +198,18 @@ export const EARLY = {
     const more = rng() < 0.5;
     const answer = more ? n + 1 : n - 1;
     return {
-      prompt: more ? `One MORE than ${n}` : `One LESS than ${n}`,
-      visual: { kind: 'tenFrame', count: n },
+      prompt: 'What goes here?',
+      visual: {
+        kind: 'numberTrack',
+        cells: more ? [n - 1, n, null] : [null, n, n + 1],
+        dir: more ? 'fwd' : 'back',
+      },
       answer,
       answerValue: answer,
       min: 0,
       distractors: [n, more ? n - 1 : n + 1, ...countSlips(rng, answer, 0)],
-      hint: more ? 'Count on one from the picture.' : 'Take one away from the picture.',
-      explain: `One ${more ? 'more' : 'less'} than ${n} is ${answer}.`,
+      hint: more ? 'Count on one more.' : 'Count back one.',
+      explain: `${more ? n : answer}, then ${more ? answer : n}.`,
     };
   },
 
@@ -209,8 +221,9 @@ export const EARLY = {
     const bigger = rng() < 0.65;
     const answer = bigger ? Math.max(a, b) : Math.min(a, b);
     return {
-      prompt: bigger ? 'Which number is BIGGER?' : 'Which number is SMALLER?',
-      visual: { kind: 'numberLine', min: 0, max: Math.max(a, b) + 2, marks: [
+      prompt: bigger ? 'Which is BIGGER?' : 'Which is SMALLER?',
+      promptIcon: bigger ? 'iconMore' : 'iconFewer',
+      visual: { kind: 'numberLine', min: Math.max(0, Math.min(a, b) - 2), max: Math.max(a, b) + 2, marks: [
         { at: a, label: String(a), color: '#7ec8ff' },
         { at: b, label: String(b), color: '#ff7ab8' },
       ] },
@@ -218,7 +231,7 @@ export const EARLY = {
       answerValue: answer,
       distractors: [a === answer ? b : a],
       choiceCount: 2,
-      hint: 'On a number line, bigger numbers are further to the right.',
+      hint: 'Bigger numbers are further right.',
       explain: `${answer} is ${bigger ? 'bigger' : 'smaller'}.`,
     };
   },
@@ -246,7 +259,17 @@ export const EARLY = {
     const noCarry = Math.floor(a / 10) * 10 + Math.floor(b / 10) * 10 + ((a % 10) + (b % 10)) % 10;
     return {
       prompt: `${a} + ${b} = ?`,
-      visual: max <= 20 && a + b <= 20 ? { kind: 'numberLine', min: 0, max: Math.max(20, answer), hop: { from: a, to: answer }, marks: [{ at: a, label: String(a), color: '#7ec8ff' }] } : null,
+      // A 0-20 line for "2 + 1" is twenty tiny labels of noise. Frame the
+      // line tightly around the numbers actually in play.
+      visual: max <= 20 && a + b <= 20
+        ? {
+          kind: 'numberLine',
+          min: Math.max(0, Math.max(a, b) - 3),
+          max: answer + 2,
+          hop: { from: a, to: answer },
+          marks: [{ at: a, label: String(a), color: '#7ec8ff' }],
+        }
+        : null,
       answer,
       answerValue: answer,
       min: 0,
@@ -277,7 +300,15 @@ export const EARLY = {
     const answer = a - b;
     return {
       prompt: `${a} − ${b} = ?`,
-      visual: max <= 20 ? { kind: 'numberLine', min: 0, max: Math.max(20, a), hop: { from: a, to: answer }, marks: [{ at: a, label: String(a), color: '#7ec8ff' }] } : null,
+      visual: max <= 20
+        ? {
+          kind: 'numberLine',
+          min: Math.max(0, answer - 2),
+          max: a + 2,
+          hop: { from: a, to: answer },
+          marks: [{ at: a, label: String(a), color: '#7ec8ff' }],
+        }
+        : null,
       answer,
       answerValue: answer,
       min: 0,
@@ -332,24 +363,24 @@ export const EARLY = {
     const askBuild = rng() < 0.55;
     if (askBuild) {
       return {
-        prompt: `${tens} ten${tens > 1 ? 's' : ''} and ${ones} one${ones === 1 ? '' : 's'} = ?`,
+        prompt: `${tens} tens and ${ones} ones = ?`,
         visual: null,
         answer: value,
         answerValue: value,
         min: 0,
         distractors: [ones * 10 + tens, tens + ones, value + 10, value - 10],
-        hint: 'The tens digit goes first, then the ones digit.',
+        hint: 'Tens digit first, then ones.',
         explain: `${tens} tens and ${ones} ones is ${value}.`,
       };
     }
     return {
-      prompt: `How many TENS are in ${value}?`,
+      prompt: `How many tens in ${value}?`,
       visual: null,
       answer: tens,
       answerValue: tens,
       min: 0,
       distractors: [ones, value, tens + 1, Math.max(0, tens - 1)],
-      hint: 'The tens digit is the first digit of a two-digit number.',
+      hint: 'The tens digit is the first digit.',
       explain: `${value} has ${tens} tens and ${ones} ones.`,
     };
   },
@@ -362,13 +393,14 @@ export const EARLY = {
     const bigger = rng() < 0.6;
     const answer = bigger ? Math.max(a, b) : Math.min(a, b);
     return {
-      prompt: bigger ? 'Which is GREATER?' : 'Which is LESS?',
+      prompt: bigger ? 'Which is BIGGER?' : 'Which is SMALLER?',
+      promptIcon: bigger ? 'iconMore' : 'iconFewer',
       visual: null,
       answer,
       answerValue: answer,
       distractors: [answer === a ? b : a],
       choiceCount: 2,
-      hint: 'Compare the tens digit first. If they match, compare the ones.',
+      hint: 'Compare the tens first, then the ones.',
       explain: `${answer} is ${bigger ? 'greater' : 'less'}.`,
     };
   },

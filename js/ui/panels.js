@@ -2,7 +2,7 @@
 // monster collection album.
 
 import { el, button, showModal, spriteImg, clear, announce } from './dom.js';
-import { PRICES, ECONOMY } from '../data/tuning.js';
+import { PRICES, TOKENS } from '../data/tuning.js';
 import { WORLDS } from '../data/worlds.js';
 import { MONSTERS } from '../gfx/sprites-units.js';
 
@@ -20,7 +20,7 @@ export function openShop(game, { inStage = false, canRefill = true, onBuy, onClo
   const render = () => {
     const body = el('div');
     body.append(
-      el('h2', {}, '🛒 Monster Shop'),
+      el('h2', {}, 'Monster Shop'),
       coinsLine(game),
     );
 
@@ -85,16 +85,19 @@ export function openShop(game, { inStage = false, canRefill = true, onBuy, onClo
 export function openSettings(game) {
   const s = game.save.data.settings;
   const body = el('div');
-  body.append(el('h2', {}, '⚙️ Settings'));
+  body.append(el('h2', {}, 'Settings'));
 
-  const muteBtn = button(s.muted ? '🔇 Sound is off' : '🔊 Sound is on',
-    { cls: s.muted ? '' : 'mint', audio: game.audio }, () => {
-      const m = !game.save.data.settings.muted;
-      game.audio.setMuted(m);
-      game.save.save();
-      muteBtn.textContent = m ? '🔇 Sound is off' : '🔊 Sound is on';
-      muteBtn.className = `btn ${m ? '' : 'mint'}`;
-    });
+  const muteBtn = button(s.muted ? 'Sound is OFF' : 'Sound is ON', {
+    cls: s.muted ? '' : 'mint', audio: game.audio, icon: s.muted ? 'iconSoundOff' : 'iconSoundOn', game,
+  }, () => {
+    const m = !game.save.data.settings.muted;
+    game.audio.setMuted(m);
+    game.save.save();
+    clear(muteBtn);
+    muteBtn.append(spriteImg(game.sprites.prop(m ? 'iconSoundOff' : 'iconSoundOn', 26), 26),
+      el('span', {}, m ? 'Sound is OFF' : 'Sound is ON'));
+    muteBtn.className = `btn ${m ? '' : 'mint'}`;
+  });
   body.append(el('div', { class: 'row', style: { marginBottom: '10px' } }, muteBtn));
 
   const slider = (label, value, onInput) => {
@@ -103,8 +106,8 @@ export function openSettings(game) {
     return el('label', { class: 'slider-row' }, el('span', {}, label), input);
   };
   body.append(
-    slider('🎵 Music', s.music, (v) => { game.audio.setMusicVolume(v); game.save.save(); }),
-    slider('🔔 Effects', s.sfx, (v) => { game.audio.setSfxVolume(v); game.save.save(); }),
+    slider('Music', s.music, (v) => { game.audio.setMusicVolume(v); game.save.save(); }),
+    slider('Sounds', s.sfx, (v) => { game.audio.setSfxVolume(v); game.save.save(); }),
   );
 
   const st = game.save.data.stats;
@@ -143,8 +146,8 @@ export function openPause(game, { onResume, onQuit }) {
     el('h2', {}, 'Paused'),
     el('p', { class: 'sub' }, 'Take your time — there is no timer in this game.'),
     el('div', { class: 'row' },
-      button('▶ Keep playing', { cls: 'primary', audio: game.audio }, () => close()),
-      button('🗺 Leave stage', { cls: 'ghost', audio: game.audio }, () => { close(); onQuit?.(); }),
+      button('Keep playing', { cls: 'primary', audio: game.audio, icon: 'iconPlay', game }, () => close()),
+      button('Leave stage', { cls: 'ghost', audio: game.audio, icon: 'iconMap', game }, () => { close(); onQuit?.(); }),
     ),
   );
   const close = showModal(body, { onClose: onResume, dismissable: false });
@@ -179,7 +182,7 @@ export function openCollection(game) {
 
   const body = el('div');
   body.append(
-    el('h2', {}, '🧸 Monster Collection'),
+    el('h2', {}, 'My Monsters'),
     el('p', { class: 'sub' }, `${owned} of ${figures.length} figures collected`),
   );
 
@@ -220,71 +223,116 @@ export function openCollection(game) {
  * Capsule machine. Coins in, a monster figure out — duplicates convert to coins
  * so a repeat never feels like a loss. No real money anywhere in this game.
  */
+/**
+ * The capsule machine.
+ *
+ * Priced in tokens, not coins, and the budget is worked through on screen:
+ * a child sees their tokens as objects, sees how many the capsule takes, and
+ * sees the subtraction that is about to happen. Spending becomes the lesson.
+ * No real money is involved anywhere.
+ */
 export function openGacha(game) {
   const save = game.save;
+  const COST = TOKENS.capsuleCost;
+
+  /** A row of token icons, with the ones about to be spent greyed out. */
+  const tokenRow = (count, spending = 0) => {
+    const row = el('div', { class: 'token-row' });
+    const shown = Math.min(count, 10);
+    for (let i = 0; i < shown; i++) {
+      row.append(spriteImg(game.sprites.prop('token', 44, { spent: i < spending }), 44));
+    }
+    if (count > shown) row.append(el('span', { class: 'token-more' }, `+${count - shown}`));
+    if (count === 0) row.append(el('span', { class: 'token-more' }, 'none yet'));
+    return row;
+  };
+
+  /** have − cost = left, laid out big enough to read and follow. */
+  const sumLine = (have, cost) => el('div', { class: 'token-sum' },
+    el('b', {}, String(have)), el('span', {}, '−'),
+    el('b', {}, String(cost)), el('span', {}, '='),
+    el('b', { class: 'result' }, String(Math.max(0, have - cost))));
 
   const render = (result) => {
+    const have = save.data.tokens || 0;
     const body = el('div');
-    body.append(el('h2', {}, '🎰 Capsule Machine'));
+    body.append(el('h2', {}, 'Capsule Machine'));
 
     if (!result) {
+      const canAfford = have >= COST;
       body.append(
         el('div', { style: { textAlign: 'center' } },
-          spriteImg(game.sprites.prop('gachaMachine', 128), 128, 'Capsule machine')),
-        el('p', { class: 'sub' }, `${PRICES.capsulePull} coins for one capsule. You have ${save.data.coins}.`),
+          spriteImg(game.sprites.prop('gachaMachine', 116), 116, 'Capsule machine')),
+        el('p', { class: 'sub', style: { marginBottom: '4px' } }, 'Your tokens'),
+        tokenRow(have, canAfford ? COST : 0),
+        el('p', { class: 'sub', style: { margin: '10px 0 2px' } },
+          `A capsule costs ${COST} tokens.`),
       );
+
+      if (canAfford) {
+        body.append(
+          el('p', { class: 'sub', style: { margin: '0 0 4px' } }, 'After this capsule you will have'),
+          sumLine(have, COST),
+        );
+      } else {
+        body.append(el('p', { class: 'sub' },
+          `You need ${COST - have} more. Finish a stage to earn a token!`));
+      }
+
       const pool = availableFigures(save);
       const missing = pool.filter((f) => !save.hasFigure(f.id)).length;
-      body.append(el('p', { class: 'sub' }, missing
-        ? `${missing} new monsters could be inside!`
-        : 'You have every monster from the worlds you have played — new ones appear as you explore.'));
+      if (missing) body.append(el('p', { class: 'sub' }, `${missing} monsters still to find!`));
+
       body.append(el('div', { class: 'row' },
-        button(`Pull a capsule (${PRICES.capsulePull} 🪙)`, {
-          cls: 'primary', audio: game.audio, disabled: save.data.coins < PRICES.capsulePull,
+        button(`Open a capsule`, {
+          cls: 'primary', audio: game.audio, disabled: !canAfford, icon: 'capsule', game,
         }, () => {
-          if (!save.spendCoins(PRICES.capsulePull)) return;
+          if (!save.spendTokens(COST)) return;
           game.audio?.capsule();
           refresh(pull());
         }),
         button('Maybe later', { cls: 'ghost', audio: game.audio }, () => close()),
       ));
     } else {
-      const { figure, isNew, refund } = result;
+      const { figure, isNew, refund, spentFrom } = result;
       body.append(
         el('div', { style: { textAlign: 'center' } },
-          spriteImg(game.sprites.monster(figure.archetype, figure.world.palette, 130, { elite: figure.boss }), 130,
+          spriteImg(game.sprites.monster(figure.archetype, figure.world.palette, 128, { elite: figure.boss }), 128,
             MONSTERS[figure.archetype].name)),
-        el('p', { class: 'sub', style: { fontSize: '1.15rem', color: '#3d2447' } },
+        el('p', { class: 'qprompt', style: { fontSize: '1.5rem', margin: '4px 0' } },
           isNew ? `NEW! ${figure.boss ? figure.world.boss.name : MONSTERS[figure.archetype].name}`
-                : `${MONSTERS[figure.archetype].name} — another one!`),
-        el('p', { class: 'sub' }, isNew
-          ? `From ${figure.world.name}. Added to your collection.`
-          : `Traded in for ${refund} coins.`),
-        el('div', { class: 'row' },
-          button(`Again (${PRICES.capsulePull} 🪙)`, {
-            cls: 'primary', audio: game.audio, disabled: save.data.coins < PRICES.capsulePull,
-          }, () => {
-            if (!save.spendCoins(PRICES.capsulePull)) return;
-            game.audio?.capsule();
-            refresh(pull());
-          }),
-          button('Done', { cls: 'ghost', audio: game.audio }, () => close()),
-        ),
+            : `${MONSTERS[figure.archetype].name} again!`),
+        el('p', { class: 'sub', style: { margin: '0 0 8px' } }, isNew
+          ? `From ${figure.world.name}.`
+          : `You already had this one, so here is ${refund} token back.`),
+        // Close the loop: show the sum that just happened, then the new total.
+        el('p', { class: 'sub', style: { margin: '0 0 2px' } }, 'You spent'),
+        sumLine(spentFrom, COST),
+        el('p', { class: 'sub', style: { margin: '8px 0 2px' } }, 'Tokens now'),
+        tokenRow(save.data.tokens || 0),
       );
+      body.append(el('div', { class: 'row', style: { marginTop: '10px' } },
+        button('Again', {
+          cls: 'primary', audio: game.audio, disabled: (save.data.tokens || 0) < COST, icon: 'capsule', game,
+        }, () => {
+          if (!save.spendTokens(COST)) return;
+          game.audio?.capsule();
+          refresh(pull());
+        }),
+        button('Done', { cls: 'ghost', audio: game.audio }, () => close()),
+      ));
     }
     return body;
   };
 
   const pull = () => {
+    const spentFrom = (save.data.tokens || 0) + COST; // tokens before this pull
     const pool = availableFigures(save);
-    // Prefer monsters the player has not seen, and make bosses genuinely rare.
-    const weighted = [];
-    for (const f of pool) {
-      const owned = save.data.collection[f.id] || 0;
-      let w = f.boss ? 1 : 6;
-      if (!owned) w *= 3;
-      weighted.push({ f, w });
-    }
+    // Favour monsters the player has not seen; keep bosses genuinely rare.
+    const weighted = pool.map((f) => ({
+      f,
+      w: (f.boss ? 1 : 6) * (save.hasFigure(f.id) ? 1 : 3),
+    }));
     const total = weighted.reduce((a, b) => a + b.w, 0);
     let r = Math.random() * total;
     let figure = weighted[weighted.length - 1].f;
@@ -294,17 +342,20 @@ export function openGacha(game) {
     save.addFigure(figure.id);
     let refund = 0;
     if (!isNew) {
-      refund = ECONOMY.duplicateFigureRefund;
-      save.addCoins(refund);
+      refund = TOKENS.duplicateRefund;
+      save.addTokens(refund);
     }
-    announce(isNew ? `New monster: ${MONSTERS[figure.archetype].name}` : `Duplicate, ${refund} coins back`);
-    return { figure, isNew, refund };
+    announce(isNew
+      ? `New monster: ${MONSTERS[figure.archetype].name}`
+      : `Duplicate, ${refund} token back`);
+    return { figure, isNew, refund, spentFrom };
   };
 
-  let close = showModal(render(null));
+  const close = showModal(render(null));
   const refresh = (result) => {
     const sheet = document.getElementById('modal').querySelector('.sheet');
     if (sheet) { clear(sheet); sheet.append(render(result)); }
   };
-  return () => close();
+  return close;
 }
+

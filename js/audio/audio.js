@@ -12,6 +12,10 @@ export class GameAudio {
     this.ctx = null;
     this.ready = false;
     this.music = null;
+    // Scenes ask for their theme in enter(), which for the title screen happens
+    // before any gesture has unlocked audio. Remember the request so unlock()
+    // can honour it instead of silently dropping the music.
+    this.wantedTheme = null;
   }
 
   /** Safe to call on every gesture; only the first one does any work. */
@@ -50,12 +54,19 @@ export class GameAudio {
     if (this.ctx.state === 'suspended') this.ctx.resume();
     this.music = new Music(this.ctx, this.musicGain);
     this.ready = true;
+    if (this.wantedTheme) this.music.play(this.wantedTheme);
   }
 
   setSuspended(hidden) {
     if (!this.ctx) return;
-    if (hidden) this.ctx.suspend?.();
-    else this.ctx.resume?.();
+    if (hidden) {
+      this.ctx.suspend?.();
+    } else {
+      this.ctx.resume?.();
+      // The scheduler's clock kept running while we were suspended; without a
+      // resync it fires every missed note at once on return.
+      this.music?.resync();
+    }
   }
 
   setMuted(m) {
@@ -73,8 +84,15 @@ export class GameAudio {
     if (this.sfxGain) this.sfxGain.gain.value = v;
   }
 
-  playTheme(params) { this.music?.play(params); }
-  stopTheme() { this.music?.stop(); }
+  playTheme(params) {
+    this.wantedTheme = params;
+    this.music?.play(params);
+  }
+
+  stopTheme() {
+    this.wantedTheme = null;
+    this.music?.stop();
+  }
 
   // ------------------------------------------------------------------ helpers
 

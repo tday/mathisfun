@@ -32,6 +32,13 @@ Handy dev URLs:
 | `?scene=play&world=g4w0&stage=10` | Jump straight to a boss stage |
 | `?sw=1` | Register the service worker on localhost (off by default) |
 
+Design review helpers:
+
+```bash
+node tools/e2e/art-check.mjs       # contact sheet of every character
+node tools/e2e/mobile-review.mjs   # every screen at 390x844, plus landscape
+```
+
 World ids are `g<band>w<0|1>` where band 0 = Pre-K … band 6 = 5th grade.
 
 ---
@@ -66,9 +73,14 @@ answer can still earn 3★.
 and after repeated misses the generator quietly steps difficulty back down. The
 player never sees this happen.
 
-**Collecting, without gambling.** A gachapon capsule machine on the map turns
-coins into monster figures. Duplicates convert straight back into coins, so a
-repeat pull is never a loss, and no real money is involved anywhere.
+**Collecting, and a maths lesson while you spend.** The gachapon capsule machine
+is priced in **tokens**, a deliberately tiny second currency — coins run into the
+hundreds, which is unreadable arithmetic for a five-year-old. Tokens stay in
+single digits, are shown as countable objects, and the machine works the budget
+through on screen: `5 − 3 = 2`, with the three tokens about to be spent greyed
+out. Spending becomes the exercise. A stage clear earns 1 token, a three-star
+clear 2, and a duplicate hands one straight back — so a repeat is never a loss,
+and no real money is involved anywhere.
 
 ### Curriculum
 
@@ -106,8 +118,10 @@ node tools/audit-questions.mjs
 It generates ~17,000 questions across all 140 stages and asserts that each has
 exactly one correct choice, no duplicate or malformed distractors, no negative
 numbers offered to young children, no zero denominators, a hint and an
-explanation, a well-formed visual spec, and that the correct answer's position is
-uniformly distributed within each choice count.
+explanation, a well-formed visual spec, that the correct answer's position is
+uniformly distributed within each choice count, and that **no Pre-K or
+Kindergarten question depends on reading** — a direction word without its icon,
+or before/after wording, fails the audit.
 
 ### 2. Browser smoke tests
 
@@ -119,9 +133,16 @@ node tools/e2e/run.mjs               # screenshots land in /tmp/mmd-shots
 
 Covers: boot with **zero console errors** (this is what catches a broken module
 path), every scene rendering a non-blank canvas, unlock rules, playing a full
-stage to the results screen, the wrong-answer path (hint shown, hearts untouched,
-coins still paid), 48px+ touch targets and no page scroll at 390×844 and 844×390,
-and recovery from a corrupt or outdated save.
+stage to the results screen, boss damage, the wrong-answer path (hint shown,
+hearts untouched, coins still paid), shop and pause pausing *and resuming*, the
+capsule machine's token arithmetic, 48px+ touch targets and no page scroll at
+390×844 and 844×390, **simulated pinch and double-tap proving the zoom lock
+holds**, recovery from a corrupt or outdated save, and offline reload.
+
+It also measures **real audio output** with an AnalyserNode on the master bus.
+A `ready` flag proves nothing: music used to be requested before the audio
+context existed and was silently dropped, and the game shipped mute-in-practice
+while every boolean said otherwise. Only a level reading catches that.
 
 `node tools/e2e/art-check.mjs` renders a large contact sheet of every monster for
 eyeballing art changes.
@@ -150,14 +171,32 @@ core → (gfx, audio, data) → ui → scenes → main
 `js/data/` never touches the DOM. That is what makes the curriculum testable in
 Node, and it is the constraint to preserve when adding skills.
 
-**Art.** Monsters are drawn procedurally as chibi vinyl figures — thick plum
-outlines, a vertical body gradient with one glossy highlight, huge eyes with
-catchlights, and all of the "scary" concentrated in the grin and brows. Each is a
-function in a 100×100 unit box, baked once to an offscreen canvas at device
-resolution and then blitted, so per-frame cost is just `drawImage`. Squash and
-stretch is applied as a transform, so bouncing costs no extra art. Worlds re-tint
-the same monsters through an HSL "mood" shift, which is why 14 worlds do not need
-14 sets of sprites.
+**Art.** Monsters are drawn procedurally as plump kawaii mascots: flat colour,
+thin even outlines, tiny dot eyes, one small mouth and big soft blush. Every
+character is one clear silhouette plus one signature detail — a shell, back
+spikes, round ears — because that is what still reads at 60px on a phone, which
+is the size that actually matters. Flat beats shaded here: gradients and gloss
+turn to mush at gameplay size. Each character is a function in a 100×100 unit
+box, baked once to an offscreen canvas at device resolution and then blitted, so
+per-frame cost is just `drawImage`. Squash and stretch is a transform, so
+bouncing costs no extra art. Worlds re-tint the same monsters through an HSL
+"mood" shift, which is why 14 worlds do not need 14 sets of sprites.
+
+**Built for readers who cannot yet read.** No question depends on decoding a
+word. Sequence questions use a number track with a gap (`4 5 6 ?`) instead of the
+words "before" and "after" — which look identical to a pre-reader but have
+opposite answers. Comparison questions carry a drawn up/down arrow chip, and
+Pre-K only ever asks one direction so the convention is learned before it is
+varied. Every control is a drawn icon rather than an emoji, because emoji
+coverage varies by device and a child cannot recover from a control that renders
+as an empty box. The curriculum audit fails the build if a Pre-K or Kindergarten
+prompt reintroduces either problem.
+
+**Touch is locked down.** Small children rest palms on the screen and tap with
+several fingers. `js/core/touchlock.js` blocks pinch-zoom, iOS gesture events,
+double-tap zoom, ⌘/Ctrl zoom, and long-press selection, and snaps the viewport
+back if anything shifts it — while leaving single taps, list scrolling and the
+OS's own accessibility zoom alone.
 
 **Stages are computed, not authored.** Wave counts, enemy mix, march speed and the
 path itself all derive from `(world, stage)` through a seeded RNG, so a stage is

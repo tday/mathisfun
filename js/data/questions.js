@@ -28,9 +28,9 @@ export const RAMP = [
       { skill: 'count_next', from: 5, weight: 2.5, params: (s) => ({ max: Math.min(10, 4 + s) }) },
     ],
     [
-      { skill: 'compare_groups', from: 1, weight: 5, params: (s) => ({ max: Math.min(10, 4 + Math.floor(s * 0.7)), gap: Math.max(1, 4 - Math.floor(s / 3)) }) },
+      { skill: 'compare_groups', from: 1, weight: 5, params: (s) => ({ max: Math.min(10, 4 + Math.floor(s * 0.7)), gap: Math.max(1, 4 - Math.floor(s / 3)), bothWays: s >= 7 }) },
       { skill: 'count_objects', from: 1, weight: 3, params: (s) => ({ max: Math.min(10, 5 + Math.floor(s * 0.5)) }) },
-      { skill: 'biggest_smallest', from: 4, weight: 3, params: (s) => ({ max: Math.min(10, 5 + s) }) },
+      { skill: 'biggest_smallest', from: 4, weight: 3, params: (s) => ({ max: Math.min(10, 5 + s), bothWays: s >= 8 }) },
       { skill: 'shape_match', from: 6, weight: 2, params: () => ({ pool: 6 }) },
     ],
   ],
@@ -230,6 +230,7 @@ export function makeQuestion(world, stage, opts = {}) {
   return {
     skill: entry.skill,
     prompt: raw.prompt,
+    promptIcon: raw.promptIcon || null,
     visual: raw.visual || null,
     choices,
     answerIndex,

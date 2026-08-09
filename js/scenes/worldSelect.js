@@ -53,7 +53,7 @@ export function createWorldSelect() {
       preview,
       el('div', { class: 'wc-body' },
         el('div', { class: 'wc-name' }, world.name),
-        el('div', { class: 'wc-sub' }, unlocked ? `${MONSTERS[world.enemies[0]].name} & friends` : 'Beat the boss before this one'),
+        el('div', { class: 'wc-sub' }, unlocked ? `${MONSTERS[world.enemies[0]].name} & friends` : 'Finish the world before this'),
         stars,
       ),
     );
@@ -87,7 +87,7 @@ export function createWorldSelect() {
       panel().append(el('div', { class: 'qcard', style: { gap: '4px' } },
         el('div', { class: 'row', style: { display: 'flex', gap: '10px', justifyContent: 'center' } },
           button('← Title', { cls: 'ghost small', audio: game.audio }, () => game.engine.go('title')),
-          el('span', { class: 'feedback', style: { flex: '1', margin: 0 } }, 'Pick your grade — you can always try another!'),
+          el('span', { class: 'feedback', style: { flex: '1', margin: 0 } }, 'Pick your grade!'),
         )));
 
       game.audio?.playTheme({ tempo: 100, mode: 'major', seed: 5, root: 57 });

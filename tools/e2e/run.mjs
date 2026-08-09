@@ -111,6 +111,56 @@ async function main() {
   check('coins earned and kept', saved.coins > 0, `coins=${saved.coins}`);
   await page.screenshot({ path: `${SHOTS}/07-results.png` });
 
+  // ------------------------------------------------------------------- audio
+  // Measures real signal on the master bus. A `ready` flag proves nothing —
+  // music used to be requested before the audio context existed and was
+  // silently dropped, and only a level reading catches that.
+  await page.goto(`${BASE}/?debug=1`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(700);
+  await page.mouse.click(500, 400); // the gesture that unlocks audio
+  await page.waitForTimeout(700);
+
+  await page.evaluate(() => {
+    const a = window.__mmd.game.audio;
+    const an = a.ctx.createAnalyser();
+    an.fftSize = 2048;
+    a.master.connect(an);
+    const buf = new Float32Array(an.fftSize);
+    window.__peak = 0;
+    window.__reset = () => { window.__peak = 0; };
+    window.__sample = () => {
+      an.getFloatTimeDomainData(buf);
+      let s = 0;
+      for (const v of buf) s += v * v;
+      const rms = Math.sqrt(s / buf.length);
+      if (rms > window.__peak) window.__peak = rms;
+    };
+  });
+
+  const peakOver = async (ms, settle = 0) => {
+    if (settle) await page.waitForTimeout(settle);
+    await page.evaluate(() => window.__reset());
+    for (let i = 0; i < ms / 25; i++) {
+      await page.evaluate(() => window.__sample());
+      await page.waitForTimeout(25);
+    }
+    return page.evaluate(() => window.__peak);
+  };
+
+  const musicPeak = await peakOver(1200);
+  check('music plays on the first screen', musicPeak > 0.0005, `peak ${musicPeak.toFixed(5)}`);
+
+  await page.evaluate(() => window.__mmd.game.audio.correct());
+  const sfxPeak = await peakOver(700);
+  check('sound effects are audible', sfxPeak > 0.0005, `peak ${sfxPeak.toFixed(5)}`);
+
+  await page.evaluate(() => window.__mmd.game.audio.setMuted(true));
+  await page.waitForTimeout(700);
+  await page.evaluate(() => window.__mmd.game.audio.correct());
+  const mutedPeak = await peakOver(700, 200);
+  check('mute silences everything', mutedPeak <= 0.0005, `peak ${mutedPeak.toFixed(5)}`);
+  await page.evaluate(() => window.__mmd.game.audio.setMuted(false));
+
   // ------------------------------------------------------- boss stage + shops
   await page.goto(`${BASE}/?debug=1&scene=play&world=g4w0&stage=10`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(1200);
@@ -151,13 +201,27 @@ async function main() {
   await page.locator('.sheet .btn', { hasText: 'Done' }).click();
   await page.waitForTimeout(250);
 
+  // Capsule machine: priced in tokens, with the subtraction shown on screen.
+  await page.evaluate(() => { window.__mmd.game.save.data.tokens = 5; window.__mmd.game.save.flush(); });
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForTimeout(500);
   await page.locator('[aria-label="Capsule machine"]').click();
-  await page.waitForTimeout(300);
-  await page.locator('.sheet .btn').first().click();
-  await page.waitForTimeout(400);
-  const collected = await page.evaluate(() => Object.keys(window.__mmd.save().collection).length);
-  check('capsule pull yields a figure', collected >= 1, `${collected} figures`);
+  await page.waitForTimeout(350);
+
+  const sumBefore = await page.locator('.token-sum').textContent();
+  check('capsule shows the budget as a sum', /5.*3.*2/.test(sumBefore.replace(/\s/g, '')), sumBefore.trim());
+  const tokenIcons = await page.locator('.token-row canvas').count();
+  check('tokens are shown as countable objects', tokenIcons === 5, `${tokenIcons} icons`);
   await page.screenshot({ path: `${SHOTS}/11-gacha.png` });
+
+  await page.locator('.sheet .btn').first().click();
+  await page.waitForTimeout(450);
+  const afterPull = await page.evaluate(() => window.__mmd.save());
+  const collected = Object.keys(afterPull.collection).length;
+  check('capsule pull yields a figure', collected >= 1, `${collected} figures`);
+  // 5 − 3 = 2, plus 1 back if it was a duplicate.
+  check('tokens deducted correctly', afterPull.tokens === 2 || afterPull.tokens === 3, `tokens=${afterPull.tokens}`);
+  await page.screenshot({ path: `${SHOTS}/11b-gacha-result.png` });
   await page.locator('.sheet .btn', { hasText: 'Done' }).click();
   await page.waitForTimeout(250);
 
@@ -181,7 +245,7 @@ async function main() {
 
   await page.goto(`${BASE}/?debug=1&scene=map&world=g2w0`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(400);
-  await page.locator('[aria-label="Collection"]').click();
+  await page.locator('[aria-label="My monsters"]').click();
   await page.waitForTimeout(350);
   check('collection album lists figures', (await page.locator('.collection figure').count()) > 0);
   await page.screenshot({ path: `${SHOTS}/12-collection.png` });
@@ -208,6 +272,35 @@ async function main() {
       document.documentElement.scrollHeight <= window.innerHeight + 2 &&
       document.documentElement.scrollWidth <= window.innerWidth + 2);
     check(`${label}: page does not scroll`, noScroll);
+
+    // Stray touches must not resize the game. Simulate the things a small child
+    // actually does: a two-finger pinch, a palm resting, and a fast double tap.
+    const beforeScale = await mp.evaluate(() => window.visualViewport?.scale ?? 1);
+    const cdp = await mctx.newCDPSession(mp);
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x: w * 0.35, y: h * 0.3 }, { x: w * 0.65, y: h * 0.3 }],
+    });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ x: w * 0.15, y: h * 0.3 }, { x: w * 0.85, y: h * 0.3 }],
+    });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    // Two quick taps in the same spot — the classic accidental zoom.
+    for (let i = 0; i < 2; i++) {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: w / 2, y: h * 0.25 }] });
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      await mp.waitForTimeout(60);
+    }
+    await mp.waitForTimeout(400);
+    const after = await mp.evaluate(() => ({
+      scale: window.visualViewport?.scale ?? 1,
+      x: window.scrollX,
+      y: window.scrollY,
+    }));
+    check(`${label}: pinch and double-tap do not zoom`,
+      Math.abs(after.scale - beforeScale) < 0.01 && after.x === 0 && after.y === 0,
+      `scale ${beforeScale}->${after.scale}, scroll ${after.x},${after.y}`);
     await mp.screenshot({ path: `${SHOTS}/08-${label}.png` });
     check(`${label}: no console errors`, merrs.length === 0, merrs.slice(0, 2).join(' | '));
     await mctx.close();
