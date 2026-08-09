@@ -26,7 +26,7 @@ function drawSnail(ctx, k, o) {
   ctx.lineWidth = 4; ctx.strokeStyle = INK; ctx.stroke();
   ctx.beginPath();
   for (let a = 0; a < Math.PI * 4.2; a += 0.2) {
-    const r = 2.5 + a * 4.4;
+    const r = 2 + a * 1.45; // stays inside the 24px shell
     const x = 66 + Math.cos(a - 1.2) * r, y = 52 + Math.sin(a - 1.2) * r;
     if (a === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
   }
@@ -49,13 +49,13 @@ function drawSnail(ctx, k, o) {
 }
 
 function drawBat(ctx, k, o) {
-  // wings
+  // wings: big, spread wide
   for (const s of [-1, 1]) {
     ctx.beginPath();
-    ctx.moveTo(50 + s * 22, 56);
-    ctx.quadraticCurveTo(50 + s * 46, 40, 50 + s * 44, 62);
-    ctx.quadraticCurveTo(50 + s * 38, 60, 50 + s * 34, 66);
-    ctx.quadraticCurveTo(50 + s * 30, 62, 50 + s * 24, 68);
+    ctx.moveTo(50 + s * 20, 52);
+    ctx.quadraticCurveTo(50 + s * 52, 30, 50 + s * 49, 64);
+    ctx.quadraticCurveTo(50 + s * 41, 58, 50 + s * 36, 70);
+    ctx.quadraticCurveTo(50 + s * 30, 62, 50 + s * 24, 72);
     ctx.closePath();
     T.outlined(ctx, k.dark, 3.4);
   }
@@ -179,12 +179,12 @@ function drawGolem(ctx, k, o) {
   T.stitch(ctx, 70, 66, 11, -0.4);
   ctx.fillStyle = withAlpha(k.accent, 0.7);
   ctx.beginPath(); ctx.ellipse(64, 30, 8, 4, 0.3, 0, Math.PI * 2); ctx.fill();
-  // heavy brow eyes
-  T.glossyEyes(ctx, 50, 52, 6.5, 24, { mood: 1, closed: o.blink });
+  // heavy brow above big glossy eyes
   ctx.fillStyle = shade(k.body, -0.25);
-  ctx.fillRect(34, 40, 32, 5);
-  ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.strokeRect(34, 40, 32, 5);
-  T.toothyGrin(ctx, 50, 70, 26, 9, { teeth: 4 });
+  ctx.fillRect(34, 36, 32, 5);
+  ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.strokeRect(34, 36, 32, 5);
+  T.glossyEyes(ctx, 50, 53, 7, 24, { mood: 0, closed: o.blink });
+  T.toothyGrin(ctx, 50, 71, 26, 9, { teeth: 4 });
   // pebble fists
   T.stubArms(ctx, 50, 74, 66, 9, shade(k.body, -0.1));
   T.sheen(ctx, 50, 46, 60, 56);

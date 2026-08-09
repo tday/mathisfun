@@ -1,0 +1,4 @@
+node_modules/
+tools/e2e/shots/
+deploy.config
+.DS_Store

@@ -1,0 +1,253 @@
+// Modal dialogs: shop, settings, pause, gacha capsule machine + collection.
+
+import { el, button, iconHTML } from './dom.js';
+import { save, persist, addCoins, addFigure, resetAll } from '../core/save.js';
+import { PRICES, HEARTS, COINS } from '../data/tuning.js';
+import { sfx, applyVolumes, toggleMute } from '../audio/audio.js';
+import { WORLDS, playedWorlds, figuresForWorld } from '../data/worlds.js';
+import { PALETTES } from '../gfx/palettes.js';
+import { drawEnemy, drawBoss, ENEMIES } from '../gfx/sprites-units.js';
+import { drawCapsule } from '../gfx/sprites-world.js';
+
+// main.js sets these so opening a modal pauses the engine
+export const modalHooks = { onOpen: null, onClose: null };
+
+export function modal(title, cls = '') {
+  const overlay = el('div', 'overlay', document.body);
+  const card = el('div', `modal-card ${cls}`, overlay);
+  const head = el('div', 'modal-head', card);
+  el('div', 'modal-title', head, title);
+  const closeBtn = button('btn-round modal-close', '✕', () => close());
+  closeBtn.setAttribute('aria-label', 'Close');
+  head.appendChild(closeBtn);
+  const body = el('div', 'modal-body', card);
+  let closed = false;
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    overlay.remove();
+    modalHooks.onClose?.();
+    onCloseCb?.();
+  };
+  let onCloseCb = null;
+  overlay.addEventListener('click', (ev) => { if (ev.target === overlay) close(); });
+  modalHooks.onOpen?.();
+  return { body, close, card, onClose: (fn) => { onCloseCb = fn; } };
+}
+
+// ---------- shop -----------------------------------------------------------
+
+export function openShop(opts = {}) {
+  const m = modal('Star Shop', 'shop');
+  const coinRow = el('div', 'shop-coins', m.body);
+  const rows = el('div', 'shop-rows', m.body);
+  const note = el('div', 'shop-note', m.body, 'You earn coins for every try — right or wrong!');
+
+  const render = () => {
+    coinRow.innerHTML = `${iconHTML('coin')} <b>${save.coins}</b> coins`;
+    rows.innerHTML = '';
+    const addRow = (iconName, label, desc, price, canBuy, buy) => {
+      const row = el('div', 'shop-row', rows);
+      el('div', 'shop-ic', row).innerHTML = iconHTML(iconName, 'ic-big');
+      const mid = el('div', 'shop-mid', row);
+      el('div', 'shop-label', mid, label);
+      el('div', 'shop-desc', mid, desc);
+      const b = button('btn-buy', `${iconHTML('coin')} ${price}`, () => {
+        if (save.coins < price || !canBuy()) return;
+        addCoins(-price);
+        buy();
+        sfx.buy();
+        persist();
+        render();
+        opts.onChange?.();
+      });
+      if (save.coins < price || !canBuy()) b.disabled = true;
+      row.appendChild(b);
+    };
+
+    addRow('shield', 'Shield', 'Blocks one monster at the gate. You keep it between stages!',
+      PRICES.shield, () => save.shields < 9, () => { save.shields++; });
+
+    if (opts.inStage) {
+      addRow('heart', 'Heart Refill', 'Patch up the castle: +1 heart right now.',
+        PRICES.heartRefill, () => opts.inStage.hearts() < save.maxHearts,
+        () => opts.inStage.refill());
+    }
+    if (save.maxHearts < 4) {
+      addRow('heart', ' 4th Heart', 'The castle grows stronger — forever!',
+        PRICES.heart4, () => true, () => { save.maxHearts = 4; opts.inStage?.refill?.(); });
+    } else if (save.maxHearts < HEARTS.absMax) {
+      addRow('heart', '5th Heart', 'Maximum castle power — forever!',
+        PRICES.heart5, () => true, () => { save.maxHearts = 5; opts.inStage?.refill?.(); });
+    }
+  };
+  render();
+  return m;
+}
+
+// ---------- settings -------------------------------------------------------
+
+export function openSettings() {
+  const m = modal('Settings');
+  const body = m.body;
+
+  const muteBtn = button('btn wide', save.settings.muted ? '🔇 Sound: OFF' : '🔊 Sound: ON', () => {
+    const muted = toggleMute();
+    muteBtn.textContent = muted ? '🔇 Sound: OFF' : '🔊 Sound: ON';
+  }, body);
+
+  const slider = (label, key) => {
+    const row = el('label', 'set-row', body);
+    el('span', 'set-label', row, label);
+    const inp = el('input', 'set-slider', row);
+    inp.type = 'range'; inp.min = 0; inp.max = 100;
+    inp.value = Math.round(save.settings[key] * 100);
+    inp.addEventListener('input', () => {
+      save.settings[key] = inp.value / 100;
+      applyVolumes();
+    });
+    inp.addEventListener('change', () => persist());
+  };
+  slider('Music volume', 'music');
+  slider('Sound effects', 'sfx');
+
+  el('div', 'set-space', body);
+  let confirming = false;
+  const resetBtn = button('btn btn-danger wide', 'Reset all progress', () => {
+    if (!confirming) {
+      confirming = true;
+      resetBtn.textContent = 'Really erase everything? Tap again!';
+      setTimeout(() => { confirming = false; resetBtn.textContent = 'Reset all progress'; }, 3000);
+      return;
+    }
+    resetAll();
+    m.close();
+    location.reload();
+  }, body);
+  el('div', 'set-about', body, 'Monster Math Defenders — every sprite and sound is generated by code. Mistakes make your brain grow! 💜');
+  return m;
+}
+
+// ---------- pause ----------------------------------------------------------
+
+export function openPause({ onQuit, onRestart }) {
+  const m = modal('Paused');
+  button('btn wide', '▶ Keep playing', () => m.close(), m.body);
+  button('btn wide', '🔁 Restart stage', () => { m.close(); onRestart(); }, m.body);
+  button('btn wide', '🗺 Back to map', () => { m.close(); onQuit(); }, m.body);
+  button('btn wide', '⚙ Settings', () => { openSettings(); }, m.body);
+  return m;
+}
+
+// ---------- gacha figures --------------------------------------------------
+
+function figureCanvas(fig, size, owned) {
+  const c = document.createElement('canvas');
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  c.width = size * dpr; c.height = size * dpr;
+  c.style.width = `${size}px`; c.style.height = `${size}px`;
+  const ctx = c.getContext('2d');
+  ctx.setTransform((size / 100) * dpr, 0, 0, (size / 100) * dpr, 0, 0);
+  const pal = PALETTES[fig.world.theme];
+  if (fig.boss) drawBoss(ctx, pal.accent, {});
+  else drawEnemy(ctx, fig.type, pal.monsters[fig.colorIndex % pal.monsters.length], {});
+  if (!owned) {
+    ctx.globalCompositeOperation = 'source-in';
+    ctx.fillStyle = 'rgba(58,37,71,0.45)';
+    ctx.fillRect(0, 0, 100, 100);
+  }
+  return c;
+}
+
+export function openCollection() {
+  const m = modal('Monster Collection', 'collection');
+  const body = m.body;
+  let total = 0, ownedCount = 0;
+  for (const world of WORLDS) {
+    const figs = figuresForWorld(world);
+    total += figs.length;
+    const sec = el('div', 'col-sec', body);
+    const ownedHere = figs.filter((f) => save.collection[f.id]).length;
+    ownedCount += ownedHere;
+    el('div', 'col-sec-title', sec, `${world.name} · ${ownedHere}/${figs.length}`);
+    const grid = el('div', 'col-grid', sec);
+    for (const fig of figs) {
+      const owned = !!save.collection[fig.id];
+      const cell = el('div', `col-cell ${owned ? 'owned' : ''}`, grid);
+      cell.appendChild(figureCanvas(fig, 64, owned));
+      el('div', 'col-name', cell, owned ? fig.name : '???');
+      if ((save.collection[fig.id] || 0) > 1) el('div', 'col-dupe', cell, `×${save.collection[fig.id]}`);
+    }
+  }
+  el('div', 'col-total', body, `${ownedCount} of ${total} collected`).style.order = '-1';
+  return m;
+}
+
+export function openGacha({ onChange } = {}) {
+  const m = modal('Capsule Machine', 'gacha');
+  const body = m.body;
+  const stage = el('div', 'gacha-stage', body);
+  const capImg = el('div', 'gacha-capsule', stage);
+  const px = 120;
+  const capCanvas = document.createElement('canvas');
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  capCanvas.width = px * dpr; capCanvas.height = px * dpr;
+  capCanvas.style.width = `${px}px`; capCanvas.style.height = `${px}px`;
+  const cctx = capCanvas.getContext('2d');
+  cctx.setTransform((px / 40) * dpr, 0, 0, (px / 40) * dpr, 0, 0);
+  drawCapsule(cctx, '#ff6f9c');
+  capImg.appendChild(capCanvas);
+  const msg = el('div', 'gacha-msg', stage, 'Earn coins by trying. Spend them on monster friends!');
+  const coinRow = el('div', 'shop-coins', body);
+  let busy = false;
+
+  const pullBtn = button('btn btn-primary wide', `Open one! ${iconHTML('coin')} ${PRICES.gachaPull}`, () => {
+    if (busy || save.coins < PRICES.gachaPull) return;
+    busy = true;
+    addCoins(-PRICES.gachaPull);
+    refresh();
+    sfx.whoosh();
+    capImg.classList.add('wobble');
+    setTimeout(() => {
+      capImg.classList.remove('wobble');
+      sfx.pop();
+      // pick a figure: favor unowned, with pity after 2 dupes
+      save.gachaDupes = save.gachaDupes || 0;
+      const pool = playedWorlds(save).flatMap(figuresForWorld);
+      const unowned = pool.filter((f) => !save.collection[f.id]);
+      let fig;
+      if (unowned.length && (Math.random() < 0.55 || save.gachaDupes >= 2)) {
+        fig = unowned[Math.floor(Math.random() * unowned.length)];
+      } else {
+        fig = pool[Math.floor(Math.random() * pool.length)];
+      }
+      const isNew = addFigure(fig.id);
+      save.gachaDupes = isNew ? 0 : save.gachaDupes + 1;
+      if (!isNew) addCoins(COINS.dupRefund);
+      persist();
+      stage.innerHTML = '';
+      const reveal = el('div', 'gacha-reveal', stage);
+      reveal.appendChild(figureCanvas(fig, 110, true));
+      el('div', 'gacha-name', reveal, fig.name);
+      el('div', `gacha-tag ${isNew ? 'new' : 'dupe'}`, reveal,
+        isNew ? '✨ NEW! ✨' : `Already yours! +${COINS.dupRefund} coins back`);
+      if (isNew) sfx.sparkle(); else sfx.coin();
+      const again = el('div', 'gacha-again', stage);
+      again.appendChild(capImg);
+      capImg.classList.add('small');
+      refresh();
+      busy = false;
+      onChange?.();
+    }, 900);
+  }, body);
+
+  const colBtn = button('btn wide', '📖 See my collection', () => openCollection(), body);
+
+  const refresh = () => {
+    coinRow.innerHTML = `${iconHTML('coin')} <b>${save.coins}</b> coins`;
+    pullBtn.disabled = save.coins < PRICES.gachaPull;
+    pullBtn.innerHTML = `Open one! ${iconHTML('coin')} ${PRICES.gachaPull}`;
+  };
+  refresh();
+  return m;
+}

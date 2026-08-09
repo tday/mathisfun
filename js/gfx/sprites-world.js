@@ -5,21 +5,24 @@ import { INK, shade, withAlpha, mix } from './palettes.js';
 import * as T from './toybox.js';
 
 // ---------- full-canvas background (bake once per stage/resize) ----------
-export function drawBackground(ctx, w, h, pal, r) {
-  const g = ctx.createLinearGradient(0, 0, 0, h);
+export function drawBackground(ctx, w, h, pal, r, opts = {}) {
+  const horizonF = opts.horizon ?? 0.55;   // hills sit here (fraction of h)
+  const groundF = opts.ground ?? 0.68;     // flat ground starts here
+  const g = ctx.createLinearGradient(0, 0, 0, h * horizonF * 1.4);
   g.addColorStop(0, pal.skyTop); g.addColorStop(1, pal.skyBot);
   ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
 
-  // celestial
+  // celestial (placed within the sky band, wherever the horizon is)
+  const skyH = h * horizonF;
   if (pal.celestial === 'sun') {
-    const sx = w * 0.82, sy = h * 0.16, sr = Math.min(w, h) * 0.07;
+    const sx = w * 0.82, sy = Math.max(24, skyH * 0.4), sr = Math.min(w, skyH) * 0.16;
     ctx.fillStyle = withAlpha('#fff3b8', 0.6);
     ctx.beginPath(); ctx.arc(sx, sy, sr * 1.7, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI * 2);
     ctx.fillStyle = '#ffe27a'; ctx.fill();
     ctx.lineWidth = 3; ctx.strokeStyle = withAlpha('#e8a838', 0.7); ctx.stroke();
   } else if (pal.celestial === 'moon') {
-    const sx = w * 0.82, sy = h * 0.14, sr = Math.min(w, h) * 0.055;
+    const sx = w * 0.82, sy = Math.max(22, skyH * 0.35), sr = Math.min(w, skyH) * 0.13;
     ctx.fillStyle = withAlpha('#fff8dc', 0.9);
     ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = pal.skyTop;
@@ -27,7 +30,7 @@ export function drawBackground(ctx, w, h, pal, r) {
   }
   if (pal.celestial === 'stars' || pal.celestial === 'moon') {
     for (let i = 0; i < 40; i++) {
-      const x = r() * w, y = r() * h * 0.55, s = 0.6 + r() * 1.6;
+      const x = r() * w, y = r() * skyH, s = 0.6 + r() * 1.6;
       ctx.fillStyle = withAlpha('#fff8dc', 0.4 + r() * 0.6);
       T.starPath(ctx, x, y, s * 2, s * 0.9, 4);
       ctx.fill();
@@ -37,26 +40,27 @@ export function drawBackground(ctx, w, h, pal, r) {
   if (pal.celestial === 'sun') {
     ctx.fillStyle = withAlpha('#ffffff', 0.85);
     for (let i = 0; i < 4; i++) {
-      const cx = r() * w, cy = h * (0.08 + r() * 0.2), cs = Math.min(w, h) * (0.03 + r() * 0.03);
+      const cx = r() * w, cy = skyH * (0.15 + r() * 0.5), cs = Math.min(w, skyH * 2.2) * (0.03 + r() * 0.03);
       for (const [dx, dy, m] of [[0, 0, 1.5], [-1.2, 0.35, 1.05], [1.2, 0.4, 1.1], [2.2, 0.15, 0.8]]) {
         ctx.beginPath(); ctx.arc(cx + dx * cs, cy + dy * cs, cs * m, 0, Math.PI * 2); ctx.fill();
       }
     }
   }
   // rolling hills
-  const horizon = h * 0.55;
+  const horizon = h * horizonF;
   for (let layer = 0; layer < 2; layer++) {
     const col = pal.hills[layer];
-    const base = horizon + layer * h * 0.08;
+    const base = horizon + layer * (h * (groundF - horizonF) * 0.65 + 4);
     ctx.fillStyle = col;
     ctx.beginPath();
     ctx.moveTo(0, h);
     ctx.lineTo(0, base);
     const bumps = 3 + layer;
+    const bumpH = Math.max(14, h * (groundF - horizonF) * 0.5);
     for (let i = 0; i <= bumps; i++) {
       const x0 = (w * i) / bumps;
       const x1 = (w * (i + 0.5)) / bumps;
-      ctx.quadraticCurveTo(x1, base - h * (0.05 + 0.04 * ((i + layer) % 2)), x0 + w / bumps, base);
+      ctx.quadraticCurveTo(x1, base - bumpH * (0.7 + 0.5 * ((i + layer) % 2)), x0 + w / bumps, base);
     }
     ctx.lineTo(w, h);
     ctx.closePath();
@@ -64,10 +68,10 @@ export function drawBackground(ctx, w, h, pal, r) {
   }
   // ground
   ctx.fillStyle = pal.ground;
-  ctx.fillRect(0, h * 0.68, w, h * 0.32);
+  ctx.fillRect(0, h * groundF, w, h * (1 - groundF));
   ctx.fillStyle = withAlpha(shade(pal.ground, -0.2), 0.35);
   for (let i = 0; i < 30; i++) {
-    const x = r() * w, y = h * (0.7 + r() * 0.28);
+    const x = r() * w, y = h * (groundF + 0.02 + r() * (0.96 - groundF));
     ctx.beginPath(); ctx.ellipse(x, y, 2 + r() * 3, 1 + r() * 1.5, 0, 0, Math.PI * 2); ctx.fill();
   }
 }
