@@ -1,0 +1,11 @@
+{
+  "name": "mathisfun",
+  "private": true,
+  "type": "module",
+  "description": "Math Is Fun: Monster Math Defenders - static browser game (dev tooling only; the game itself has zero dependencies)",
+  "scripts": {
+    "dev": "python3 -m http.server 8080",
+    "audit": "node tools/audit-questions.mjs",
+    "icons": "node tools/gen-icons.mjs"
+  }
+}
