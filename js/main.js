@@ -26,6 +26,8 @@ for (const [k, v] of Object.entries(UI)) document.documentElement.style.setPrope
 
 const screen = new Screen(canvas);
 const engine = new Engine(screen);
+const fast = parseFloat(params.get('fast') || '1');
+if (fast > 1) engine.timeScale = Math.min(6, fast);
 screen.onResize = (w, h) => engine.onLayout(w, h);
 screen.onPointer((e) => engine.onPointer(e));
 

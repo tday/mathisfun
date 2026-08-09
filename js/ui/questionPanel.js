@@ -25,6 +25,7 @@ export class QuestionPanel {
   }
 
   get height() { return this.wrap.offsetHeight; }
+  get width() { return this.wrap.offsetWidth; }
 
   ask(question, onAnswer) {
     this.question = question;

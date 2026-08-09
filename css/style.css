@@ -439,10 +439,18 @@ img.ic, img.ic-big, img.ic-sm, img.ic-star { vertical-align: middle; }
 
 /* ---------- responsive tweaks ---------- */
 @media (orientation: landscape) and (max-height: 540px) {
-  .qcard { max-width: 640px; padding: 6px 10px 6px; }
-  .qprompt { font-size: clamp(17px, 3.4vh, 22px); margin-bottom: 4px; }
-  .qbtn { min-height: 46px; flex: 1 1 20%; font-size: clamp(16px, 4vh, 22px); }
-  .qfeedback { min-height: 16px; font-size: 13px; margin-top: 4px; }
+  /* dock the question card on the right so the battlefield stays visible */
+  .qwrap {
+    left: auto; right: 8px;
+    top: calc(56px + var(--safe-top)); bottom: calc(8px + var(--safe-bot));
+    width: min(47vw, 430px);
+    align-items: flex-end;
+  }
+  .qcard { max-height: 100%; overflow-y: auto; touch-action: pan-y; padding: 8px 10px 6px; }
+  .qprompt { font-size: clamp(17px, 4.6vh, 22px); margin-bottom: 4px; }
+  .qbtn { min-height: 46px; font-size: clamp(16px, 4.5vh, 22px); }
+  .qfeedback { min-height: 14px; font-size: 12.5px; margin-top: 4px; }
+  .btn-shop { right: auto; left: 10px; top: calc(58px + var(--safe-top)); }
   .btn-fab { width: 48px; height: 48px; min-height: 48px; font-size: 20px; }
   .hud-hearts img { width: 22px; height: 22px; }
   .logo { margin-top: 0; }

@@ -18,6 +18,7 @@ export class Engine {
     this.acc = 0;
     this.last = 0;
     this.time = 0;
+    this.timeScale = 1; // >1 = fast-forward (testing)
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) this.last = performance.now();
     });
@@ -66,7 +67,7 @@ export class Engine {
         this.acc = Math.min(this.acc + dt, MAX_FRAME * 2);
         while (this.acc >= STEP) {
           this.time += STEP;
-          this.scene?.update?.(STEP);
+          this.scene?.update?.(STEP * this.timeScale);
           this.acc -= STEP;
         }
       }

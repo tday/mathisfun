@@ -129,9 +129,15 @@ export class PlayScene {
 
   onLayout(w, h) {
     this.w = w; this.h = h;
-    const panelH = this.panel?.height || 180;
-    this.rect = { x: 0, y: 56, w, h: Math.max(140, h - panelH - 72) };
-    this.unit = clamp(Math.min(w, this.rect.h) * 0.16, 46, 88);
+    this.sideDock = w > h && h < 540; // CSS docks the card right in short landscape
+    if (this.sideDock) {
+      const panelW = this.panel?.width || Math.min(w * 0.47, 430);
+      this.rect = { x: 0, y: 52, w: Math.max(200, w - panelW - 20), h: h - 64 };
+    } else {
+      const panelH = this.panel?.height || 180;
+      this.rect = { x: 0, y: 56, w, h: Math.max(140, h - panelH - 72) };
+    }
+    this.unit = clamp(Math.min(this.rect.w, this.rect.h) * 0.16, 42, 88);
     // the path lives on the ground band, below the scenery horizon
     this.groundTop = this.rect.y + this.rect.h * 0.3;
     this.groundBot = this.rect.y + this.rect.h;
@@ -140,7 +146,7 @@ export class PlayScene {
 
   toPx(nx, ny) {
     return {
-      x: nx * (this.w - this.unit * 1.15),
+      x: this.rect.x + nx * (this.rect.w - this.unit * 1.15),
       y: this.groundTop + ny * (this.groundBot - this.groundTop),
     };
   }
@@ -413,9 +419,9 @@ export class PlayScene {
     // battlefield shrinks/grows if the question card changed height a lot
     this.frame = (this.frame || 0) + 1;
     if (this.frame % 30 === 0 && this.w) {
-      const ph = this.panel.height || 180;
-      if (Math.abs(ph - (this.lastPanelH || 0)) > 30) {
-        this.lastPanelH = ph;
+      const pd = this.sideDock ? (this.panel.width || 0) : (this.panel.height || 180);
+      if (Math.abs(pd - (this.lastPanelDim || 0)) > 30) {
+        this.lastPanelDim = pd;
         this.onLayout(this.w, this.h);
       }
     }
@@ -550,27 +556,29 @@ export class PlayScene {
     }
 
     // boss hp bar
-    if (this.boss?.alive && this.bossSpawned) this.drawBossBar(ctx, w);
+    if (this.boss?.alive && this.bossSpawned) this.drawBossBar(ctx);
 
     this.fx.draw(ctx);
     ctx.restore();
 
-    // banner text
+    // banner text (centered over the battlefield, not the whole canvas)
     if (this.banner.t > 0) {
       const a = this.phase === 'intro' ? 1 : clamp(this.banner.t, 0, 1);
+      const bx = this.rect.x + this.rect.w / 2;
+      const bw = this.rect.w;
       ctx.save();
       ctx.globalAlpha = a;
       ctx.textAlign = 'center';
       const cy = this.rect.y + this.rect.h * 0.34;
-      ctx.font = `800 ${clamp(w * 0.055, 22, 40)}px 'Chalkboard SE','Comic Sans MS',system-ui,sans-serif`;
+      ctx.font = `800 ${clamp(bw * 0.055, 20, 40)}px 'Chalkboard SE','Comic Sans MS',system-ui,sans-serif`;
       ctx.lineWidth = 7; ctx.strokeStyle = '#fff'; ctx.lineJoin = 'round';
-      ctx.strokeText(this.banner.text, w / 2, cy);
+      ctx.strokeText(this.banner.text, bx, cy);
       ctx.fillStyle = INK;
-      ctx.fillText(this.banner.text, w / 2, cy);
+      ctx.fillText(this.banner.text, bx, cy);
       if (this.banner.sub) {
-        ctx.font = `700 ${clamp(w * 0.032, 15, 22)}px system-ui,sans-serif`;
-        ctx.lineWidth = 5; ctx.strokeText(this.banner.sub, w / 2, cy + clamp(w * 0.06, 28, 40));
-        ctx.fillText(this.banner.sub, w / 2, cy + clamp(w * 0.06, 28, 40));
+        ctx.font = `700 ${clamp(bw * 0.032, 14, 22)}px system-ui,sans-serif`;
+        ctx.lineWidth = 5; ctx.strokeText(this.banner.sub, bx, cy + clamp(bw * 0.06, 26, 40));
+        ctx.fillText(this.banner.sub, bx, cy + clamp(bw * 0.06, 26, 40));
       }
       ctx.restore();
     }
@@ -589,15 +597,16 @@ export class PlayScene {
     }
   }
 
-  drawBossBar(ctx, w) {
-    const bw = Math.min(w * 0.6, 360), bh = 16;
-    const x = w / 2 - bw / 2, y = this.rect.y + 8;
+  drawBossBar(ctx) {
+    const cx = this.rect.x + this.rect.w / 2;
+    const bw = Math.min(this.rect.w * 0.6, 360), bh = 16;
+    const x = cx - bw / 2, y = this.rect.y + 8;
     ctx.save();
     ctx.font = `800 13px system-ui,sans-serif`;
     ctx.textAlign = 'center';
     ctx.lineWidth = 4; ctx.strokeStyle = '#fff';
-    ctx.strokeText(this.world.bossName, w / 2, y - 4);
-    ctx.fillStyle = INK; ctx.fillText(this.world.bossName, w / 2, y - 4);
+    ctx.strokeText(this.world.bossName, cx, y - 4);
+    ctx.fillStyle = INK; ctx.fillText(this.world.bossName, cx, y - 4);
     ctx.fillStyle = withAlpha(INK, 0.25);
     ctx.beginPath(); ctx.roundRect(x, y, bw, bh, 8); ctx.fill();
     const frac = Math.max(0, this.boss.hp / this.boss.maxHp);
