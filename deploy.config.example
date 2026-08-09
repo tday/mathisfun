@@ -1,0 +1,10 @@
+# Copy to deploy.config (gitignored) and fill in.
+
+# S3 bucket name (private; served through CloudFront with OAC).
+BUCKET=my-math-game-bucket
+
+# CloudFront distribution to invalidate after upload. Optional.
+DISTRIBUTION_ID=E1234567890ABC
+
+# Optional sub-path inside the bucket, e.g. PREFIX=math
+PREFIX=

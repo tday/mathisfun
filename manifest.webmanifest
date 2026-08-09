@@ -1,0 +1,17 @@
+{
+  "name": "Monster Math Defenders",
+  "short_name": "Math Defenders",
+  "description": "A friendly tower-defence maths game for pre-K to 5th grade. Every try earns coins.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#2b1b38",
+  "theme_color": "#3d2447",
+  "categories": ["education", "games", "kids"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

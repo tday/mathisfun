@@ -1,0 +1,10 @@
+# Dev-only: the shipped game has zero dependencies.
+tools/e2e/node_modules/
+tools/e2e/package-lock.json
+tools/e2e/package.json
+
+# Real deploy target lives here; deploy.config.example is the template.
+deploy.config
+
+.DS_Store
+*.log

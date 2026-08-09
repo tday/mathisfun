@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3d2447">
+<meta name="description" content="Monster Math Defenders — a friendly tower-defence maths game for pre-K to 5th grade. Every try earns coins.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Monster Math Defenders</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <div id="stage">
+      <canvas id="game"></canvas>
+      <div id="overlay"></div>
+    </div>
+    <div id="panel"></div>
+  </div>
+  <div id="modal" hidden></div>
+  <div id="boot">
+    <div class="boot-inner">
+      <div class="boot-blob"></div>
+      <p>Loading monsters…</p>
+    </div>
+  </div>
+  <noscript><p style="padding:2rem;font:1rem system-ui">This game needs JavaScript turned on.</p></noscript>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
