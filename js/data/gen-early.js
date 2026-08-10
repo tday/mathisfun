@@ -345,7 +345,16 @@ export const EARLY = {
     const answer = total - a;
     return {
       prompt: `${a} + ? = ${total}`,
-      visual: { kind: 'tenFrame', count: a },
+      // A number line, not a ten-frame: by 1st grade the ten-frame has done its
+      // job, and "count on from a to the total" is the strategy this skill is
+      // actually teaching — which is exactly what the hop shows.
+      visual: {
+        kind: 'numberLine',
+        min: Math.max(0, a - 2),
+        max: total + 2,
+        hop: { from: a, to: total },
+        marks: [{ at: a, label: String(a), color: '#7ec8ff' }],
+      },
       answer,
       answerValue: answer,
       min: 0,

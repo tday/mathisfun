@@ -149,6 +149,16 @@ eyeballing art changes.
 
 ---
 
+## Deeper documentation
+
+| Doc | For |
+| --- | --- |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the system fits together — layering, loop, art pipeline, determinism. Read before changing code. |
+| [docs/SPEC.md](docs/SPEC.md) | The game rules: mechanics, growth-mindset requirements, curriculum, economy, accessibility rules. Read before changing behaviour. |
+| [docs/LEARNINGS.md](docs/LEARNINGS.md) | What worked, what broke, and why several checks exist. Read before repeating a mistake. |
+
+---
+
 ## How it is put together
 
 ```

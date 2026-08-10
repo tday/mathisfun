@@ -74,6 +74,12 @@ for (const world of WORLDS) {
         fail(world, stage, q, 'before/after wording requires reading');
       }
 
+      // The ten-frame is a Kindergarten counting tool. Past that it is visual
+      // clutter that gets in the way of the strategy being taught.
+      if (q.visual?.kind === 'tenFrame' && world.band > 1) {
+        fail(world, stage, q, 'ten-frame used above Kindergarten');
+      }
+
       // Visual specs must be complete enough for fx.js to draw them.
       if (q.visual) {
         const v = q.visual;

@@ -1,0 +1,205 @@
+# Learnings
+
+What actually worked while building this, and the bugs that were only found
+because something was checked rather than assumed. Written for whoever changes
+this next — including me.
+
+---
+
+## The big one: a passing flag is not a working feature
+
+The game shipped **silent**. Music never played on the title screen, and only
+started if you navigated to another screen.
+
+The cause: scenes request their theme in `enter()`. For the title screen that
+runs before any click, so the request reached `audio.music` while it was still
+`null` and was dropped. Nothing replayed it after the audio context unlocked.
+
+What makes this worth writing down is that **every observable boolean was
+correct**: `ready: true`, `ctx.state: 'running'`, gains at the right values. Any
+test asserting on those would have passed while the game made no sound at all.
+
+The fix in the code was five lines. The fix in the *process* was to measure the
+thing itself:
+
+```js
+const an = audio.ctx.createAnalyser();
+audio.master.connect(an);          // tap the real output bus
+// ...sample, compute RMS, assert > threshold
+```
+
+**Test the observable behaviour, not the bookkeeping that is supposed to cause
+it.** The suite now asserts music is audible, SFX are audible, and mute actually
+silences. All three would have been green-but-lying under a flag-based test.
+
+Corollary, from the same session: my first mute test *failed* and the mute code
+was fine. The AnalyserNode holds ~46ms of history, so it was still reporting the
+previous sound's tail. When a new measurement-based test fails, suspect the
+measurement before the code.
+
+---
+
+## Flat art beats shaded art at gameplay size
+
+The first art pass used gradients, gloss highlights, big glossy eyes with
+catchlights, and thick outlines. It looked good in a 260px contact sheet and
+turned to mush at the ~60px monsters actually render at on a phone.
+
+Rebuilding around flat colour, thin even outlines, tiny dot eyes and one small
+mouth was a large improvement in readability, and *less* code.
+
+The general rule: **design at the size the thing actually appears.** The contact
+sheet at 220px was misleading; the phone screenshot was the truth. Both are now
+in `tools/e2e/` (`art-check.mjs`, `mobile-review.mjs`) precisely so neither can
+be skipped.
+
+Second-order lesson: because the house style lives in `toybox.js` and characters
+never hard-code fills, the whole style change was one file plus a mechanical
+sweep. **Centralising the vocabulary is what made a total restyle affordable.**
+
+---
+
+## Pre-readers break assumptions you did not know you had
+
+"Which has MORE?" and "Which has FEWER?" are, to a child who cannot read,
+*the same screen* — identical layout, identical shapes — with opposite correct
+answers. A prompt like "What comes just after 4?" is unanswerable for the same
+reason.
+
+Fixes that worked:
+
+- **Let the picture ask the question.** A number track with a gap — `4 5 6 ?` —
+  needs no words at all. This is strictly better than the sentence it replaced,
+  for readers too.
+- **Give direction a symbol, and teach it before varying it.** An up/down arrow
+  chip carries more/fewer. Pre-K only ever sees one direction, so the convention
+  is learned before the opposite appears in Kindergarten.
+- **Never let an emoji carry meaning.** Emoji render differently or not at all
+  depending on device and font. Every control is now a drawn icon.
+
+And then I shipped the arrow **pointing down for MORE**. An inverted icon is
+worse than no icon, because a child will trust it and get the opposite answer.
+Caught by rendering the icon and counting white pixels above versus below the
+centre. **When an asset encodes a fact, assert the fact, not the asset's
+existence.**
+
+---
+
+## Constrain the machine so the machine can check the work
+
+Two structural decisions paid for themselves repeatedly.
+
+**`js/data/` never touches the DOM.** That single rule means the whole curriculum
+runs in plain Node, so `tools/audit-questions.mjs` checks 16,800 questions across
+all 140 stages in seconds. It immediately caught something manual play would
+likely never have surfaced: `sub_within` was offering **negative distractors** to
+first graders — `6 − 5 = ?` with `-9` as an option. Then it caught the same class
+of bug again later in `add_ten`.
+
+The audit is now the place where pedagogical rules get *enforced*, not just
+documented:
+
+- no negative numbers or zero denominators
+- exactly one correct choice, no duplicates
+- answer position uniform within each choice count
+- no Pre-K/K question that requires reading
+- no ten-frames above Kindergarten
+
+Every one of those started as a bug or a note, and became a rule that cannot
+silently regress.
+
+**Everything gameplay-random is seeded on `(worldId, stage)`.** Stages are
+byte-identical every run, which is what lets the browser suite play a whole stage
+to completion and assert on the result. Determinism is a testing feature first
+and a design nicety second.
+
+---
+
+## Small things that turned out to matter
+
+**Derive state you could store.** Unlock flags do not exist; `isStageUnlocked`
+computes from stars. State that does not exist cannot drift out of sync.
+
+**Compute content instead of authoring it.** 140 stages come from
+`stageParams(world, stage)` and a seeded path generator. Adjusting global
+difficulty is editing one file, not 140.
+
+**Put every feel-number and every line of copy in one file.** `tuning.js` meant
+the difficulty, economy and tone could be retuned without touching gameplay code.
+
+**Real DOM for UI over a canvas game.** Focus rings, `aria-live`, screen-reader
+labels, crisp text at any DPR and native touch sizing all came free. The usual
+objection (syncing DOM to world coordinates) never applied, because everything in
+the overlay is screen-anchored.
+
+**A `?debug=1` hook is worth writing early.** `window.__mmd.state()` /
+`.question()` is what lets tests *play the game* rather than pattern-match
+pixels. It made the difference between smoke tests and real coverage.
+
+---
+
+## Bugs found only by looking at a phone
+
+Desktop screenshots hid all of these. `mobile-review.mjs` exists because of them.
+
+- **Map nodes overlapped.** A single free-form spline spaced stages evenly by arc
+  length, which bunched them on a tall narrow screen. Replaced with a serpentine
+  grid sized to the viewport, with the trail splined *through* the nodes so it
+  can never miss one.
+- **The HUD wrapped to two rows** once shields appeared, and the absolutely
+  positioned wave badge landed on top of the controls. Moving the badge into the
+  HUD's flex flow fixed it structurally.
+- **Cream text on a pale sky** was the worst contrast in the game. Solid chips.
+- **Scenery in the dark worlds was near-black** on near-black ground.
+- **A 0–20 number line for "2 + 1"** is twenty tiny labels of noise. Number lines
+  are now framed to the numbers in play.
+- **The castle rendered half off-screen** at narrow widths, because its position
+  was a fixed fraction of the width with no clamp.
+
+Also caught on mobile by simulating real input: pinch and double-tap both zoomed
+the page. Kids rest palms and tap with several fingers, and a zoomed-in game is
+not something a five-year-old can undo.
+
+---
+
+## Deployment
+
+**GitHub Pages project sites are served from a subpath** (`/mathisfun/`), not the
+domain root. Everything already used relative paths — including
+`navigator.serviceWorker.register('sw.js')` and the worker's own precache list —
+so it worked, but that was verified by assembling the exact artifact, serving it
+from a subdirectory and running the full suite against it, rather than assumed.
+
+**The service worker matched cache entries with the query string**, so deep links
+like `?scene=play&world=g2w0` missed the cache and failed offline.
+`caches.match(request, { ignoreSearch: true })` plus a navigation fallback fixed
+it. Found by an offline test, not by reasoning.
+
+**Gate the deploy on the deterministic check, not the flaky one.** The curriculum
+audit blocks publishing; the browser suite reports and uploads screenshots but is
+`continue-on-error`. Shipping broken maths is unacceptable; a timing-sensitive
+browser test failing on a slow CI runner should not block a release.
+
+**Pages needs a public repo or a paid plan.** Worth knowing before promising a
+URL — and worth saying plainly that a Pages site is publicly readable either way,
+so paying to keep the repo private does not make the game private.
+
+---
+
+## Process notes
+
+**Regex-editing source code is fast and occasionally wrong.** Bulk edits via
+Python broke a string literal (`'…same shape.` with the closing quote eaten) and
+mangled a nested call (`fill(ctx, lighten(stone)` — the inner comma confused a
+non-greedy match). Both were caught immediately because every module is
+syntax-checked after edits. Use the sweep, then *verify the parse*.
+
+Note that `node --check file.js` parses as CommonJS and will happily pass files
+that are broken as ES modules. `node --input-type=module --check < file.js` is
+the one that tells the truth.
+
+**Screenshot everything, then actually look.** Most of the meaningful fixes in
+this project came from reading a rendered image, not from reading code: the
+inverted arrow, the overlapping map nodes, the goggle-like eyebrows in the first
+art pass, the full-width wave badge. Automated checks confirm behaviour; only
+looking catches design.
