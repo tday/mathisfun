@@ -41,6 +41,30 @@ const canvasPainted = (handle) => handle.evaluate((c) => {
   return opaque > 4;
 });
 
+/**
+ * How much of each edge the drawing runs into. A shape that is bigger than the
+ * box it is centred in does not fail any other check — it just quietly arrives
+ * with its top sliced off, which is how a heart answer button shipped looking
+ * like a diamond. Returns the share of each border row/column that is inked.
+ */
+const edgeBleed = (handle) => handle.evaluate((c) => {
+  const ctx = c.getContext('2d');
+  const { width: w, height: h } = c;
+  if (!w || !h) return { top: 0, bottom: 0, left: 0, right: 0 };
+  const inked = (x, y, dx, dy, n) => {
+    const d = ctx.getImageData(x, y, dx === 0 ? 1 : n, dy === 0 ? 1 : n).data;
+    let hit = 0;
+    for (let i = 3; i < d.length; i += 4) if (d[i] > 24) hit++;
+    return hit / n;
+  };
+  return {
+    top: inked(0, 0, 1, 0, w),
+    bottom: inked(0, h - 1, 1, 0, w),
+    left: inked(0, 0, 0, 1, h),
+    right: inked(w - 1, 0, 0, 1, h),
+  };
+});
+
 async function qaOneQuestion(page, world, stage, n) {
   const q = await page.evaluate(() => window.__mmd.question());
   if (!q) return 'no-question';
@@ -58,8 +82,20 @@ async function qaOneQuestion(page, world, stage, n) {
   const visualShown = await visual.isVisible();
 
   if (q.visual && !visualShown) bad(where, 'question declares a visual but the canvas is hidden');
-  if (q.visual && visualShown && !(await canvasPainted(await visual.elementHandle()))) {
-    bad(where, `visual "${q.visual.kind}" renders blank`, JSON.stringify(q.visual));
+  if (q.visual && visualShown) {
+    const cv = await visual.elementHandle();
+    if (!(await canvasPainted(cv))) {
+      bad(where, `visual "${q.visual.kind}" renders blank`, JSON.stringify(q.visual));
+    } else {
+      // Question visuals are allowed to run the full width (number lines,
+      // rulers) but never off the top or bottom of their box.
+      const e = await edgeBleed(cv);
+      const worst = e.top > e.bottom ? ['top', e.top] : ['bottom', e.bottom];
+      if (worst[1] > 0.12) {
+        bad(where, `visual "${q.visual.kind}" is clipped at the ${worst[0]}`,
+          `${(worst[1] * 100).toFixed(0)}% inked — ${JSON.stringify(q.visual)}`);
+      }
+    }
   }
   if (!q.visual && !promptText.trim() && !hasIcon) bad(where, 'nothing on screen to answer');
   if (q.promptIcon && !hasIcon) bad(where, 'promptIcon declared but no chip rendered');
@@ -90,8 +126,17 @@ async function qaOneQuestion(page, world, stage, n) {
     const text = ((await b.textContent()) || '').trim();
     const drawn = await b.locator('canvas').count();
     if (!text && !drawn) bad(where, `answer ${i} is blank`);
-    if (drawn && !(await canvasPainted(await b.locator('canvas').elementHandle()))) {
-      bad(where, `drawn answer ${i} renders blank`);
+    if (drawn) {
+      const cv = await b.locator('canvas').elementHandle();
+      if (!(await canvasPainted(cv))) bad(where, `drawn answer ${i} renders blank`);
+      // A drawn choice is a centred glyph with margin on every side. Ink on a
+      // border means it is bigger than its box and has been cut off.
+      const e = await edgeBleed(cv);
+      const worst = Object.entries(e).sort((a, c) => c[1] - a[1])[0];
+      if (worst[1] > 0.06) {
+        bad(where, `drawn answer ${i} is clipped at the ${worst[0]}`,
+          `${(worst[1] * 100).toFixed(0)}% of that edge is inked`);
+      }
     }
     labels.push(drawn ? `[drawn]` : text);
   }

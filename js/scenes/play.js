@@ -12,7 +12,7 @@ import { drawUnit } from '../gfx/sprite.js';
 import { palette } from '../gfx/palettes.js';
 import { Particles, drawSkyDecor, drawGround, outlinedText, FONT } from '../gfx/fx.js';
 import { INK, roundRectPath, ink } from '../gfx/toybox.js';
-import { withAlpha, clamp, mulberry32, hash } from '../core/utils.js';
+import { withAlpha, clamp, mulberry32, hash, plural } from '../core/utils.js';
 import { overlay, panel, clear, announce } from '../ui/dom.js';
 import { Hud } from '../ui/hud.js';
 import { QuestionPanel } from '../ui/questionPanel.js';
@@ -223,7 +223,7 @@ export function createPlay() {
       game.audio?.heartLost();
       const c = castlePx();
       particles.text(c.x, c.y - 40, '−1', '#ff5d7e', 26);
-      announce(`A monster got through. ${hearts} hearts left.`);
+      announce(`A monster got through. ${plural(hearts, 'heart')} left.`);
       if (hearts <= 0) finish(false);
     }
   }

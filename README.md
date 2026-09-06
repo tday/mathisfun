@@ -172,12 +172,15 @@ every declared visual paints something, every answer button is drawn and at leas
 48px, the right answer is accepted and the game moves on, a wrong one keeps every
 heart and offers a hint, and **no letter reaches the screen below 2nd grade**.
 
-Two helpers render images for a human to judge, since neither suite can tell you
-a picture is unreadable:
+Four helpers render images for a human to judge, since neither suite can tell
+you a picture is unreadable:
 
 ```bash
 node tools/e2e/visual-check.mjs      # every question visual at card size
+node tools/e2e/shape-check.mjs       # every answer shape, with its edge bleed measured
+node tools/e2e/results-check.mjs     # the results screen at each shape it must survive
 node tools/e2e/art-check.mjs         # character contact sheet
+node tools/e2e/mobile-review.mjs     # every screen at phone size
 ```
 
 It also measures **real audio output** with an AnalyserNode on the master bus.

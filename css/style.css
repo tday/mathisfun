@@ -300,6 +300,12 @@ body {
   .hud .pill { padding: 3px 9px 3px 5px; font-size: 0.8rem; }
   .hud .btn.icon { width: 40px; height: 40px; min-height: 40px; font-size: 1rem; }
 }
+/* The curriculum unit is a grown-up's label and is already on the world card.
+   Below this width it is dropped rather than wrapping the HUD onto a second
+   row, which would sit on top of the world plate underneath it. */
+@media (max-width: 720px) {
+  .hud .hud-unit { display: none; }
+}
 
 .wave-badge {
   flex: 0 0 100%;
@@ -503,15 +509,28 @@ body {
 .wc-sub { font-size: 0.85rem; color: var(--ink-soft); font-weight: 700; }
 .wc-stars { font-weight: 900; color: #b45f09; font-size: 1.05rem; margin-top: 3px; }
 
+/* Results text block. It is its own flex column so the lines keep the breathing
+   room they had as direct children of the card. */
+.results-text { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
 /* ------------------------------------------------------- landscape adjustments */
 
 @media (orientation: landscape) and (max-height: 560px) {
-  .qcard { flex-direction: row; align-items: center; gap: 12px; padding: 8px 10px; }
-  .qcard .qhead { flex: 0 1 38%; min-width: 0; }
-  .qcard .answers { flex: 1 1 62%; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
+  /* Scoped to the question card. Applying it to every .qcard turned the results
+     card's paragraphs into side-by-side columns two words wide. */
+  .qcard-question { flex-direction: row; align-items: center; gap: 12px; padding: 8px 10px; }
+  .qcard-question .qhead { flex: 0 1 38%; min-width: 0; }
+  .qcard-question .answers { flex: 1 1 62%; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
   .answers .btn { min-height: 54px; font-size: clamp(1.3rem, 4vw, 1.9rem); }
   .qvisual { height: clamp(44px, 16vh, 88px); }
   .feedback { font-size: 1rem; }
+
+  /* Results: text on the left, buttons stacked on the right. */
+  .results-card { flex-direction: row; align-items: center; gap: 14px; padding: 8px 12px; }
+  .results-card .results-text { flex: 1 1 auto; min-width: 0; }
+  .results-card .results-text .qprompt { font-size: clamp(1.3rem, 3.6vw, 1.9rem) !important; }
+  .results-card > .row { flex: 0 0 auto; flex-direction: column; margin-top: 0 !important; }
+  .results-card > .row .btn { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

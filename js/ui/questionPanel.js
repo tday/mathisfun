@@ -20,7 +20,9 @@ export class QuestionPanel {
     this.feedbackEl = el('p', { class: 'feedback', 'aria-live': 'polite' });
 
     this.head = el('div', { class: 'qhead' }, this.promptEl, this.visualCanvas);
-    this.root = el('div', { class: 'qcard' }, this.head, this.answersEl, this.feedbackEl);
+    // `qcard-question` is what the landscape layout keys off: the play card
+    // becomes two columns there, but the results card (also a .qcard) must not.
+    this.root = el('div', { class: 'qcard qcard-question' }, this.head, this.answersEl, this.feedbackEl);
   }
 
   mount(host) {

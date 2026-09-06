@@ -5,11 +5,12 @@ import { el, button, showModal, spriteImg, clear, announce } from './dom.js';
 import { PRICES, TOKENS } from '../data/tuning.js';
 import { WORLDS } from '../data/worlds.js';
 import { MONSTERS } from '../gfx/sprites-units.js';
+import { plural } from '../core/utils.js';
 
 const coinIcon = (game, size = 22) => spriteImg(game.sprites.prop('coin', size), size, 'coins');
 
 function coinsLine(game) {
-  return el('p', { class: 'sub' }, `You have ${game.save.data.coins} coins`);
+  return el('p', { class: 'sub' }, `You have ${plural(game.save.data.coins, 'coin')}`);
 }
 
 // ------------------------------------------------------------------- the shop
@@ -113,7 +114,7 @@ export function openSettings(game) {
   const st = game.save.data.stats;
   const pct = st.attempts ? Math.round((st.correct / st.attempts) * 100) : 0;
   body.append(el('p', { class: 'sub', style: { marginTop: '14px' } },
-    `You have tried ${st.attempts} questions and got ${st.correct} right (${pct}%). Every single try helped!`));
+    `You have tried ${plural(st.attempts, 'question')} and got ${st.correct} right (${pct}%). Every single try helped!`));
 
   const danger = button('Start over', { cls: 'small', audio: game.audio }, () => {
     const confirmBody = el('div', {},
@@ -281,7 +282,7 @@ export function openGacha(game) {
 
       const pool = availableFigures(save);
       const missing = pool.filter((f) => !save.hasFigure(f.id)).length;
-      if (missing) body.append(el('p', { class: 'sub' }, `${missing} monsters still to find!`));
+      if (missing) body.append(el('p', { class: 'sub' }, `${plural(missing, 'monster')} still to find!`));
 
       body.append(el('div', { class: 'row' },
         button(`Open a capsule`, {

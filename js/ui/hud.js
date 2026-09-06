@@ -1,6 +1,7 @@
 // In-stage overlay HUD: hearts, shields, coins, wave badge, pause and mute.
 
 import { el, clear, button, spriteImg } from './dom.js';
+import { plural } from '../core/utils.js';
 
 export class Hud {
   constructor(game, { onPause, onShop } = {}) {
@@ -74,7 +75,7 @@ export class Hud {
     this._coins = n;
     clear(this.coinsEl);
     this.coinsEl.append(spriteImg(this.game.sprites.prop('coin', 24), 24), el('span', {}, String(n)));
-    this.coinsEl.setAttribute('aria-label', `${n} coins`);
+    this.coinsEl.setAttribute('aria-label', plural(n, 'coin'));
   }
 
   setWave(text) {

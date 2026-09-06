@@ -66,6 +66,9 @@ export function shuffle(rng, arr) {
 
 export const range = (n) => Array.from({ length: n }, (_, i) => i);
 
+/** "1 coin" / "2 coins". Small children notice "1 hearts left". */
+export const plural = (n, word, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
+
 // ---------------------------------------------------------------- color utils
 
 function hexToRgb(hex) {

@@ -4,8 +4,10 @@ import { button, el, panel, clear, overlay } from '../ui/dom.js';
 import { drawUnit } from '../gfx/sprite.js';
 import { palette } from '../gfx/palettes.js';
 import { worldById } from '../data/worlds.js';
-import { outlinedText, drawGround, drawSkyDecor } from '../gfx/fx.js';
+import { outlinedText, fitFont, drawGround, drawSkyDecor, FONT } from '../gfx/fx.js';
 import { openSettings, openCollection } from '../ui/panels.js';
+import { roundRectPath, ink } from '../gfx/toybox.js';
+import { withAlpha } from '../core/utils.js';
 
 const CAST = [
   { key: 'blobbie', x: 0.24, s: 0.62, phase: 0 },
@@ -72,7 +74,12 @@ export function createTitle() {
 
       // Logo.
       const cx = view.w / 2;
-      const big = Math.min(view.w * 0.11, 62);
+      // Both lines share the size of whichever one has to shrink most, so the
+      // logo stays a logo instead of two mismatched words.
+      const room = view.w - 20;
+      const want = Math.min(view.w * 0.11, 62);
+      const big = Math.min(fitFont(ctx, 'MONSTER MATH', room, want),
+        fitFont(ctx, 'DEFENDERS', room, want));
       ctx.textAlign = 'center';
       ctx.save();
       ctx.translate(cx, view.h * 0.2 + Math.sin(t * 1.6) * 4);
@@ -80,11 +87,19 @@ export function createTitle() {
       outlinedText(ctx, 'DEFENDERS', 0, big * 0.98, `900 ${big}px ${FONT}`, '#ff7ab8', 8);
       ctx.restore();
 
-      ctx.save();
-      ctx.globalAlpha = 0.9;
-      outlinedText(ctx, 'Every try earns coins!', cx, view.h * 0.2 + big * 1.9,
-        `800 ${Math.min(view.w * 0.038, 21)}px ${FONT}`, '#fff8ec', 5);
-      ctx.restore();
+      // On a solid chip rather than outlined cream on a pale sky, which is the
+      // worst contrast pairing in the game.
+      const tag = 'Every try earns coins!';
+      const tagSize = fitFont(ctx, tag, room - 28, Math.min(view.w * 0.038, 21), 800);
+      const tagY = view.h * 0.2 + big * 1.9;
+      ctx.font = `800 ${tagSize}px ${FONT}`;
+      const chipW = ctx.measureText(tag).width + tagSize * 1.4;
+      const chipH = tagSize * 1.9;
+      roundRectPath(ctx, cx - chipW / 2, tagY - chipH / 2, chipW, chipH, chipH / 2);
+      ctx.fillStyle = withAlpha('#fff8ec', 0.94);
+      ctx.fill();
+      ink(ctx, 3);
+      outlinedText(ctx, tag, cx, tagY, `800 ${tagSize}px ${FONT}`, '#3d2447', 0, null);
 
       // Cast.
       const heroSize = Math.min(view.w * 0.3, view.h * 0.36, 190);
@@ -105,4 +120,3 @@ export function createTitle() {
   };
 }
 
-const FONT = 'ui-rounded, "SF Pro Rounded", "Varela Round", "Trebuchet MS", system-ui, sans-serif';

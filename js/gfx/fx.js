@@ -6,14 +6,36 @@ import { withAlpha, clamp, lerp, mulberry32 } from '../core/utils.js';
 
 export const FONT = 'ui-rounded, "SF Pro Rounded", "Varela Round", "Trebuchet MS", system-ui, sans-serif';
 
+/**
+ * The largest size at or below `size` at which `text` fits `maxW`.
+ *
+ * Display text was being sized at a fixed fraction of the viewport, which only
+ * works while the font is the one you designed against. The stack falls back to
+ * a wider face on plenty of devices, and "MONSTER MATH" then ran off both edges
+ * of the screen. Measuring costs nothing and cannot be wrong.
+ */
+export function fitFont(ctx, text, maxW, size, weight = 900) {
+  ctx.font = `${weight} ${size}px ${FONT}`;
+  const w = ctx.measureText(text).width;
+  return w <= maxW ? size : Math.max(8, size * (maxW / w));
+}
+
+/**
+ * Text with an outline behind it. The outline is capped against the type size:
+ * a 6px stroke reads as a chunky cartoon edge at 40px, and at 19px it spreads
+ * far enough to weld each letter to its neighbours, which is what turned
+ * "PERFECT DEFENCE!" into a single smear on a phone.
+ */
 export function outlinedText(ctx, text, x, y, font, fill, lw = 6, stroke = INK) {
   ctx.save();
   ctx.font = font;
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';
-  ctx.lineWidth = lw;
+  ctx.miterLimit = 2;
+  const px = Number((/(\d+(?:\.\d+)?)px/.exec(font) || [])[1]);
+  ctx.lineWidth = Number.isFinite(px) ? Math.min(lw, px * 0.12) : lw;
   ctx.strokeStyle = stroke;
-  ctx.strokeText(text, x, y);
+  if (ctx.lineWidth > 0 && stroke) ctx.strokeText(text, x, y);
   ctx.fillStyle = fill;
   ctx.fillText(text, x, y);
   ctx.restore();
@@ -1075,12 +1097,18 @@ export function drawShapePath(ctx, kind, r) {
       ctx.closePath();
       break;
     case 'heart': {
-      const s = r * 2;
-      ctx.moveTo(0, s * 0.35);
-      ctx.bezierCurveTo(0, s * 0.05, -s * 0.5, -s * 0.12, -s * 0.5, -s * 0.42);
-      ctx.bezierCurveTo(-s * 0.5, -s * 0.78, -s * 0.08, -s * 0.8, 0, -s * 0.52);
-      ctx.bezierCurveTo(s * 0.08, -s * 0.8, s * 0.5, -s * 0.78, s * 0.5, -s * 0.42);
-      ctx.bezierCurveTo(s * 0.5, -s * 0.12, 0, s * 0.05, 0, s * 0.35);
+      // Every other shape here fits inside a box of +/-r. The heart's natural
+      // path runs -1.42r to +0.70r, so drawn raw it overflows the top of
+      // whatever it is centred in — which is exactly how it arrived on an
+      // answer button with its lobes sliced off. Scale it to the same height as
+      // the others (2 / 2.124) and drop it by its own centre offset.
+      const s = r * 2 * 0.9416;
+      const dy = r * 0.341;
+      ctx.moveTo(0, s * 0.35 + dy);
+      ctx.bezierCurveTo(0, s * 0.05 + dy, -s * 0.5, -s * 0.12 + dy, -s * 0.5, -s * 0.42 + dy);
+      ctx.bezierCurveTo(-s * 0.5, -s * 0.78 + dy, -s * 0.08, -s * 0.8 + dy, 0, -s * 0.52 + dy);
+      ctx.bezierCurveTo(s * 0.08, -s * 0.8 + dy, s * 0.5, -s * 0.78 + dy, s * 0.5, -s * 0.42 + dy);
+      ctx.bezierCurveTo(s * 0.5, -s * 0.12 + dy, 0, s * 0.05 + dy, 0, s * 0.35 + dy);
       ctx.closePath();
       break;
     }
@@ -1106,9 +1134,13 @@ export function drawShapePath(ctx, kind, r) {
   }
 }
 
-/** Star rating row drawn straight onto the canvas (map nodes, results). */
+/**
+ * Star rating row drawn straight onto the canvas (map nodes, results).
+ * `size` is each star's outer radius, so the pitch has to clear 2 x size —
+ * anything less and the points of one star sit inside the next.
+ */
 export function drawStars(ctx, x, y, size, count, max = 3) {
-  const gap = size * 1.15;
+  const gap = size * 2.1;
   const start = x - ((max - 1) * gap) / 2;
   for (let i = 0; i < max; i++) {
     fiveStar(ctx, start + i * gap, y, size, i < count ? '#ffd34e' : 'rgba(255,255,255,0.35)');

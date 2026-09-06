@@ -5,7 +5,7 @@
 
 import { drawUnit } from '../gfx/sprite.js';
 import { palette } from '../gfx/palettes.js';
-import { drawSkyDecor, drawGround, outlinedText, drawStars, FONT, Particles } from '../gfx/fx.js';
+import { drawSkyDecor, drawGround, outlinedText, fitFont, drawStars, FONT, Particles } from '../gfx/fx.js';
 import { INK, ink, roundRectPath } from '../gfx/toybox.js';
 import { mulberry32, clamp, withAlpha, lerp, makeSpline } from '../core/utils.js';
 import { el, clear, button, overlay, panel, spriteImg } from '../ui/dom.js';
@@ -16,7 +16,7 @@ import {
 
 export function createMap() {
   let game, world, pal, nodes, trail, decor, grid, selected, t, particles, view, hero;
-  let playBtn, titleEl;
+  let playBtn, titleEl, bar;
 
   /**
    * Node positions adapt to the screen shape. A single free-form spline looked
@@ -104,10 +104,15 @@ export function createMap() {
       hero = { at: selected - 1, x: 0, y: 0, walkTo: null };
 
       clear(overlay());
-      const bar = el('div', { class: 'hud' },
+      bar = el('div', { class: 'hud' },
         button('', { cls: 'icon ghost', audio: game.audio, ariaLabel: 'Back to worlds', icon: 'iconBack', game },
           () => game.engine.go('worldSelect')),
-        el('div', { class: 'pill', title: world.im }, `${world.bandName} · ${world.unit}`),
+        // The unit name is for a grown-up and is already on the world card, so
+        // it is dropped on a narrow screen rather than wrapping the HUD onto a
+        // second row — which landed it straight on top of the world plate.
+        el('div', { class: 'pill', title: `${world.unit} · ${world.im}` },
+          world.bandName,
+          el('span', { class: 'hud-unit' }, ` · ${world.unit}`)),
         el('div', { class: 'spacer' }),
         el('div', { class: 'pill', 'aria-label': `${game.save.data.tokens || 0} capsule tokens` },
           spriteImg(game.sprites.prop('token', 24), 24),
@@ -244,7 +249,7 @@ export function createMap() {
           outlinedText(ctx, String(n.stage), 0, isBoss ? -r * 1.15 : 1,
             `900 ${r * (isBoss ? 0.95 : 1.15)}px ${FONT}`, '#fff8ec', 5);
         }
-        if (unlocked && s > 0) drawStars(ctx, 0, (isBoss ? r * 1.35 : r * 1.42), r * 0.36, s);
+        if (unlocked && s > 0) drawStars(ctx, 0, (isBoss ? r * 1.35 : r * 1.42), r * 0.26, s);
         ctx.restore();
       }
 
@@ -256,16 +261,20 @@ export function createMap() {
 
       particles.render(ctx);
 
-      // World name plate.
+      // World name plate, sat below whatever height the HUD actually took —
+      // a fixed offset put it under the HUD's second row the moment the HUD
+      // wrapped.
       const prog = worldProgress(save, world);
       ctx.textAlign = 'center';
-      const plateW = Math.min(v.w * 0.8, 460);
-      roundRectPath(ctx, (v.w - plateW) / 2, 54, plateW, 40, 20);
+      const label = `${world.name} · ${prog.stars}/${prog.max} ★`;
+      const plateW = Math.min(v.w * 0.86, 460);
+      const plateY = (bar?.offsetHeight || 44) + 14;
+      const lSize = fitFont(ctx, label, plateW - 24, Math.min(v.w * 0.045, 21));
+      roundRectPath(ctx, (v.w - plateW) / 2, plateY, plateW, 40, 20);
       ctx.fillStyle = withAlpha('#fff8ec', 0.92);
       ctx.fill();
       ink(ctx, 3, INK);
-      outlinedText(ctx, `${world.name} · ${prog.stars}/${prog.max} ★`, v.w / 2, 74,
-        `900 ${Math.min(v.w * 0.045, 21)}px ${FONT}`, '#3d2447', 0, null);
+      outlinedText(ctx, label, v.w / 2, plateY + 20, `900 ${lSize}px ${FONT}`, '#3d2447', 0, null);
     },
 
     debugState() {
