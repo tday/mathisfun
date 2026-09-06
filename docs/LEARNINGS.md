@@ -93,6 +93,21 @@ numeral card with drawn dot-groups for answers, base-ten blocks read in both
 directions, and `[shape] = [?]` are all sharper questions than the sentences they
 replaced. **A bright line you can test beats a principle you have to interpret.**
 
+And then the first pass overshot in the other direction: having removed the
+words, I put a `?` above every picture instead. Five apples over three numbered
+buttons does not need one — the question is already on screen, and a lone `?` is
+one more symbol for a four-year-old to work out. The prompts are gone now unless
+they *are* the question (`3 + 2 = ?`), and where a symbol genuinely belongs — the
+`=` in "which group has this many?" — it is drawn inside the picture next to the
+thing it relates, not floated above the card.
+
+The catch is that a picture-only question has nothing for a screen reader to
+read, and the visual canvas is `aria-hidden`. Every question now carries an
+`srPrompt` that is never rendered and becomes the answer group's accessible name.
+**Quiet on screen is not the same as unlabelled**, and writing the audit rule for
+it (no visible prompt *and* no `srPrompt` fails) is what stopped the cleanup from
+quietly costing accessibility.
+
 ---
 
 ## Constrain the machine so the machine can check the work

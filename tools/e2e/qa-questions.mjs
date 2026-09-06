@@ -64,6 +64,16 @@ async function qaOneQuestion(page, world, stage, n) {
   if (!q.visual && !promptText.trim() && !hasIcon) bad(where, 'nothing on screen to answer');
   if (q.promptIcon && !hasIcon) bad(where, 'promptIcon declared but no chip rendered');
 
+  // Most early questions are asked by the picture alone and show no prompt at
+  // all. That is the design — but the picture is aria-hidden, so the answer
+  // group has to carry a name of its own or the question is silent.
+  const groupName = await page.locator('.answers').evaluate((el) => {
+    const by = el.getAttribute('aria-labelledby');
+    if (by) return (document.getElementById(by)?.textContent || '').trim();
+    return (el.getAttribute('aria-label') || '').trim();
+  });
+  if (!groupName) bad(where, 'the answer group reaches a screen reader unnamed');
+
   // --- the answers are tappable ---------------------------------------------
   const btns = page.locator('.answers .btn');
   const count = await btns.count();

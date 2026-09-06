@@ -8,6 +8,15 @@
 // asked entirely by the picture, a drawn icon chip, and mathematical symbols.
 // `tools/audit-questions.mjs` fails the build if a letter slips in.
 //
+// AND: where the picture already asks the question, there is no prompt at all.
+// Five apples above three numbered buttons does not need a "?" hovering over it,
+// and a lone "?" is one more thing on screen for a four-year-old to work out.
+// A prompt earns its place only when it *is* the question — "3 + 2 = ?" — or
+// when a drawn icon chip carries a direction the picture cannot.
+//
+// Every question still names itself for a screen reader through `srPrompt`,
+// which is never rendered. Quiet on screen is not the same as unlabelled.
+//
 // Pure functions: (rng, params) -> raw question. No DOM, no globals.
 
 import { randInt, pick, shuffle } from '../core/utils.js';
@@ -65,7 +74,8 @@ export const EARLY = {
     const n = num(rng, 2, max);
     const sprite = pick(rng, COUNTABLES);
     return {
-      prompt: '?',
+      prompt: '',
+      srPrompt: 'How many?',
       visual: { kind: 'countRow', sprite, count: n, arrange: arrangement(rng, n), seed: n * 7 + max },
       answer: n,
       answerValue: n,
@@ -88,8 +98,10 @@ export const EARLY = {
     const n = num(rng, 2, max);
     const wrong = shuffle(rng, countSlips(rng, n, 1)).slice(0, 2);
     return {
-      prompt: '= ?',
-      visual: { kind: 'numeralCard', value: n },
+      // "3 = ?" is drawn inside the picture, so nothing sits above it.
+      prompt: '',
+      srPrompt: `Which group has ${n}?`,
+      visual: { kind: 'matchCard', left: { value: n } },
       answer: n,
       distractors: wrong,
       choiceDraw: dotChoices([n, ...wrong]),
@@ -108,10 +120,9 @@ export const EARLY = {
     const choiceDraw = {};
     for (const s of [target, ...others]) choiceDraw[SHAPE_NAMES[s]] = { kind: 'shape', shape: s };
     return {
-      // No prompt: the shapeMatch picture already draws "this shape = ?", and
-      // repeating it above the card is just clutter.
       prompt: '',
-      visual: { kind: 'shapeMatch', shape: target, color: '#ffd34e' },
+      srPrompt: 'Which shape is the same?',
+      visual: { kind: 'matchCard', left: { shape: target }, color: '#ffd34e' },
       answer: SHAPE_NAMES[target],
       distractors: others.map((s) => SHAPE_NAMES[s]),
       choiceDraw,
@@ -130,7 +141,8 @@ export const EARLY = {
     const shape = pick(rng, Object.keys(CORNERS));
     const answer = CORNERS[shape];
     return {
-      prompt: '?',
+      prompt: '',
+      srPrompt: 'How many corners?',
       visual: { kind: 'shape', shape, color: '#7ec8ff', corners: true },
       answer,
       answerValue: answer,
@@ -151,7 +163,8 @@ export const EARLY = {
       ? [null, n, n + 1, n + 2]
       : [n - 2, n - 1, n, null];
     return {
-      prompt: '?',
+      prompt: '',
+      srPrompt: 'Which number is missing?',
       visual: { kind: 'numberTrack', cells, dir: back ? 'back' : 'fwd' },
       answer,
       answerValue: answer,
@@ -171,7 +184,8 @@ export const EARLY = {
     const answer = run[gapAt];
     const cells = run.map((v, i) => (i === gapAt ? null : v));
     return {
-      prompt: '?',
+      prompt: '',
+      srPrompt: 'Which number is missing?',
       visual: { kind: 'numberTrack', cells, dir: 'fwd' },
       answer,
       answerValue: answer,
@@ -194,6 +208,7 @@ export const EARLY = {
     const answer = more ? b : a;
     return {
       prompt: '',
+      srPrompt: more ? 'Which side has more?' : 'Which side has fewer?',
       promptIcon: more ? 'iconMore' : 'iconFewer',
       visual: {
         kind: 'compareGroups',
@@ -221,6 +236,7 @@ export const EARLY = {
     const answer = biggest ? Math.max(...set) : Math.min(...set);
     return {
       prompt: '',
+      srPrompt: biggest ? 'Which is biggest?' : 'Which is smallest?',
       promptIcon: biggest ? 'iconMore' : 'iconFewer',
       visual: {
         kind: 'numberLine',
@@ -243,7 +259,8 @@ export const EARLY = {
     const max = Math.max(4, Math.min(20, p.max ?? 10));
     const n = num(rng, 2, max);
     return {
-      prompt: '?',
+      prompt: '',
+      srPrompt: 'How many dots?',
       visual: { kind: 'tenFrame', count: n },
       answer: n,
       answerValue: n,
@@ -267,7 +284,8 @@ export const EARLY = {
     const slot = p.makeTen ? 2 : num(rng, 0, 2); // 0 = whole unknown
     const answer = slot === 0 ? whole : slot === 1 ? a : b;
     return {
-      prompt: '?',
+      prompt: '',
+      srPrompt: 'What is the missing number?',
       visual: {
         kind: 'numberBond',
         whole: slot === 0 ? null : whole,
@@ -342,7 +360,8 @@ export const EARLY = {
     const more = rng() < 0.5;
     const answer = more ? n + 1 : n - 1;
     return {
-      prompt: '?',
+      prompt: '',
+      srPrompt: 'Which number is missing?',
       visual: {
         kind: 'numberTrack',
         cells: more ? [n - 1, n, null] : [null, n, n + 1],
@@ -366,6 +385,7 @@ export const EARLY = {
     const answer = bigger ? Math.max(a, b) : Math.min(a, b);
     return {
       prompt: '',
+      srPrompt: bigger ? 'Which is bigger?' : 'Which is smaller?',
       promptIcon: bigger ? 'iconMore' : 'iconFewer',
       visual: {
         kind: 'numberLine',
@@ -620,7 +640,8 @@ export const EARLY = {
     const markIdx = num(rng, 0, rowCount - 1);
     const answer = counts[markIdx];
     return {
-      prompt: '?',
+      prompt: '',
+      srPrompt: 'How many in the highlighted row?',
       visual: {
         kind: 'pictureGraph',
         rows: sprites.map((sprite, i) => ({ sprite, count: counts[i], mark: i === markIdx })),
@@ -643,7 +664,8 @@ export const EARLY = {
     const ones = num(rng, 0, 9);
     const answer = tens * 10 + ones;
     return {
-      prompt: '?',
+      prompt: '',
+      srPrompt: 'How many altogether?',
       visual: { kind: 'baseTen', tens, ones },
       answer,
       answerValue: answer,
@@ -670,8 +692,9 @@ export const EARLY = {
     const choiceDraw = {};
     for (const v of all) choiceDraw[String(v)] = { kind: 'baseTen', tens: Math.floor(v / 10), ones: v % 10 };
     return {
-      prompt: '= ?',
-      visual: { kind: 'numeralCard', value },
+      prompt: '',
+      srPrompt: `Which blocks show ${value}?`,
+      visual: { kind: 'matchCard', left: { value } },
       answer: value,
       distractors: wrong,
       choiceDraw,
@@ -690,6 +713,7 @@ export const EARLY = {
     const answer = bigger ? Math.max(a, b) : Math.min(a, b);
     return {
       prompt: '',
+      srPrompt: bigger ? 'Which is bigger?' : 'Which is smaller?',
       promptIcon: bigger ? 'iconMore' : 'iconFewer',
       visual: {
         kind: 'numberLine',
@@ -722,7 +746,8 @@ export const EARLY = {
     // nothing next to what is being measured.
     const span = Math.min(12, units + num(rng, 1, 3));
     return {
-      prompt: '?',
+      prompt: '',
+      srPrompt: 'How many units long?',
       visual: { kind: 'lengthUnits', units, span, color: pick(rng, ['#ff9ec4', '#7ee0b8', '#c9a4f0', '#ffd34e']) },
       answer: units,
       answerValue: units,
@@ -744,12 +769,16 @@ export const EARLY = {
     const step = pick(rng, [2, 3, 5, 10].filter((s) => s <= max / 3));
     const answer = forward ? start + step : Math.max(0, start - step);
     return {
-      prompt: '?',
+      prompt: '',
+      srPrompt: 'Where does the jump land?',
       visual: {
         kind: 'numberLine',
         min: Math.max(0, Math.min(start, answer) - 3),
         max: Math.max(start, answer) + 3,
-        marks: [{ at: start, label: String(start), color: '#7ec8ff' }],
+        marks: [
+          { at: start, label: String(start), color: '#7ec8ff' },
+          { at: answer, label: '?', color: '#ffe9a8' },
+        ],
         hops: [{ from: start, to: answer, label: `${forward ? '+' : '−'}${step}` }],
       },
       answer,

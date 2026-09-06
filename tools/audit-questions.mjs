@@ -103,6 +103,13 @@ for (const world of WORLDS) {
         }
       }
 
+      // A question asked entirely by its picture shows nothing on screen for a
+      // screen reader to read, and the picture itself is aria-hidden. Quiet is
+      // fine; unlabelled is not.
+      if (!q.prompt && (!q.srPrompt || q.srPrompt.length < 4)) {
+        fail(world, stage, q, 'no visible prompt and no screen-reader label');
+      }
+
       // The ten-frame is a Kindergarten counting tool. Past that it is visual
       // clutter that gets in the way of the strategy being taught.
       if (q.visual?.kind === 'tenFrame' && world.band > 1) {
@@ -124,8 +131,7 @@ for (const world of WORLDS) {
           numberLine: () => Number.isFinite(v.min) && Number.isFinite(v.max) && v.max > v.min,
           shape: () => !!v.shape,
           numberTrack: () => Array.isArray(v.cells) && v.cells.length >= 2 && v.cells.filter((c) => c === null).length === 1,
-          shapeMatch: () => !!v.shape,
-          numeralCard: () => Number.isFinite(v.value),
+          matchCard: () => !!v.left && (!!v.left.shape || Number.isFinite(v.left.value)),
           numberBond: () => Array.isArray(v.parts) && v.parts.length === 2
             && [v.whole, ...v.parts].filter((x) => x == null).length <= 1
             && [v.whole, ...v.parts].every((x) => x == null || Number.isFinite(x)),

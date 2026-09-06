@@ -571,44 +571,44 @@ const VISUALS = {
   },
 
   /**
-   * "This shape = which one?" stated as a picture. An equals sign and an empty
-   * slot ask the matching question without the words "which one matches".
+   * "This = which one?" drawn as a picture: the given thing on a card, an equals
+   * sign, and an empty slot. Carrying the question inside the picture is what
+   * lets these questions have no prompt at all — a "= ?" floating above the card
+   * says the same thing twice, the second time in symbols a four-year-old has to
+   * parse unaided.
    */
-  shapeMatch(ctx, spec, bank, w, h) {
-    const box = Math.min(h - 6, (w - 44) / 2);
-    const total = box * 2 + 44;
+  matchCard(ctx, spec, bank, w, h) {
+    // Everything is sized off the card, including the gap the equals sign sits
+    // in. A fixed pixel gap looks right at one card size and turns the "=" into
+    // a pair of stretched bars at every other.
+    const box = Math.min(h - 6, w / 2.5);
+    const gap = box * 0.5;
+    const total = box * 2 + gap;
     const x0 = (w - total) / 2;
     const cy = h / 2;
 
     card(ctx, x0, cy - box / 2, box, box, '#ffffff');
-    ctx.save();
-    ctx.translate(x0 + box / 2, cy);
-    drawShapePath(ctx, spec.shape, box * 0.32);
-    ctx.fillStyle = spec.color || '#ffd34e';
-    ctx.fill();
-    ink(ctx, 3.4);
-    ctx.restore();
-
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    outlinedText(ctx, '=', x0 + box + 22, cy, `900 ${box * 0.5}px ${FONT}`, '#fff8ec', 5);
+    if (spec.left.shape) {
+      ctx.save();
+      ctx.translate(x0 + box / 2, cy);
+      drawShapePath(ctx, spec.left.shape, box * 0.32);
+      ctx.fillStyle = spec.color || '#ffd34e';
+      ctx.fill();
+      ink(ctx, 3.4);
+      ctx.restore();
+    } else {
+      outlinedText(ctx, String(spec.left.value), x0 + box / 2, cy,
+        `900 ${box * 0.46}px ${FONT}`, '#3d2447', 0, null);
+    }
 
-    card(ctx, x0 + box + 44, cy - box / 2, box, box, '#ffe9a8');
-    outlinedText(ctx, '?', x0 + box + 44 + box / 2, cy,
+    outlinedText(ctx, '=', x0 + box + gap / 2, cy,
+      `900 ${box * 0.34}px ${FONT}`, '#fff8ec', 4);
+
+    card(ctx, x0 + box + gap, cy - box / 2, box, box, '#ffe9a8');
+    outlinedText(ctx, '?', x0 + box + gap + box / 2, cy,
       `900 ${box * 0.52}px ${FONT}`, '#b45f09', 0, null);
-  },
-
-  /**
-   * A numeral on a card, for questions that go the other way round: read the
-   * symbol, then pick the group that has that many.
-   */
-  numeralCard(ctx, spec, bank, w, h) {
-    const box = Math.min(h - 6, w * 0.5);
-    card(ctx, (w - box) / 2, (h - box) / 2, box, box, spec.color || '#ffffff');
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    outlinedText(ctx, String(spec.value), w / 2, h / 2,
-      `900 ${box * 0.56}px ${FONT}`, '#3d2447', 0, null);
   },
 
   /**

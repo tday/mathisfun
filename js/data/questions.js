@@ -316,6 +316,9 @@ export function makeQuestion(world, stage, opts = {}) {
   return {
     skill: entry.skill,
     prompt: raw.prompt,
+    // What a screen reader says when the question is asked entirely by its
+    // picture. Never rendered — quiet on screen is not the same as unlabelled.
+    srPrompt: raw.srPrompt || raw.prompt || null,
     promptIcon: raw.promptIcon || null,
     visual: raw.visual || null,
     choices,

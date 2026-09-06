@@ -59,6 +59,17 @@ export class QuestionPanel {
 
     clear(this.answersEl);
     this.answersEl.dataset.n = String(question.choices.length);
+    // Most early questions are asked by their picture alone, and the picture is
+    // aria-hidden, so the group would otherwise reach a screen reader with no
+    // name at all. Point at the prompt when there is one to read, and name the
+    // group directly when there is not.
+    if (question.prompt) {
+      this.answersEl.setAttribute('aria-labelledby', 'q-prompt');
+      this.answersEl.removeAttribute('aria-label');
+    } else {
+      this.answersEl.removeAttribute('aria-labelledby');
+      this.answersEl.setAttribute('aria-label', question.srPrompt || 'Choose an answer');
+    }
     this.buttons = question.choices.map((choice, i) => {
       const b = el('button', {
         class: `btn choice-${i}`,
@@ -78,7 +89,7 @@ export class QuestionPanel {
 
     this.feedbackEl.textContent = '';
     this.feedbackEl.className = 'feedback';
-    announce(question.prompt || 'New question');
+    announce(question.srPrompt || question.prompt || 'New question');
     void band;
   }
 

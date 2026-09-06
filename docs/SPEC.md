@@ -234,21 +234,34 @@ The youngest players are the primary users, and they cannot read.
 **Below 2nd grade, no question contains a letter.** Not "keep the words simple" —
 none at all, in the prompt or on any answer button. Pre-K, Kindergarten and 1st
 grade are asked entirely through a picture, a drawn icon chip and mathematical
-symbols:
+symbols.
 
-- Counting is a collection and a `?`. The answers are numerals.
-- The converse — numeral in, quantity out — is a numeral card, `= ?`, and answer
-  buttons that are **drawn groups of dots** rather than words.
-- Shape matching is drawn as `[shape] = [?]`, so the question needs no prompt.
+**And where the picture asks the question, there is no prompt at all.** Five
+apples above three numbered buttons does not need a `?` hovering over it, and a
+lone `?` is one more thing on screen for a four-year-old to work out. A prompt
+earns its place only when it *is* the question — `3 + 2 = ?` — or when a drawn
+icon chip carries a direction the picture cannot. So:
+
+- Counting is a collection and three numerals. Nothing else.
+- The converse — numeral in, quantity out — is drawn as `[3] = [?]`, with answer
+  buttons that are **drawn groups of dots**. The `=` lives inside the picture,
+  where a pre-reader meets it next to the thing it relates.
+- Shape matching is the same picture with a shape in the first card.
 - Sequence questions use a **number track with a gap** — `4 5 ? 7` — never the
   words "before" and "after". Those two words look identical to a pre-reader but
-  produce opposite answers.
-- Comparison carries a drawn **up/down arrow chip** and no prompt at all. Pre-K
-  asks one direction only, so the convention is learned before it is varied.
+  produce opposite answers. The `?` is the gap itself.
+- Comparison is a drawn **up/down arrow chip** over two groups. Pre-K asks one
+  direction only, so the convention is learned before it is varied.
 - Place value is **base-ten blocks**, in both directions: blocks → numeral, and
   numeral → blocks as drawn answer buttons.
 - Addition, subtraction and unknown-position equations are written in symbols
-  (`8 = 3 + ?`), which are not words.
+  (`8 = 3 + ?`), which are not words — and there the prompt *is* the question, so
+  it stays.
+
+Quiet on screen is not the same as unlabelled. Every question carries an
+`srPrompt` — "How many?", "Which shape is the same?" — that is never rendered and
+is used as the answer group's accessible name and its `aria-live` announcement.
+The audit fails a question that has neither a visible prompt nor one of these.
 
 Hints and explanations are still written in English. They are for the adult
 sitting alongside, and nothing in the game requires reading one: a second miss

@@ -170,7 +170,7 @@ goes through `mulberry32`.
 questions.js  RAMP[band][worldInBand] → weighted skill pick (anti-repeat applied)
       ↓       gen-early / gen-mid / gen-upper produce a raw question
       ↓       distractor toolkit + shuffle + validity guards
-   Question { skill, prompt, promptIcon, visual, choices, answerIndex,
+   Question { skill, prompt, srPrompt, promptIcon, visual, choices, answerIndex,
               answerValue, hint, explain }
 ```
 
@@ -192,10 +192,21 @@ feeling like a worksheet.
 
 Bands 0–2 are pre- and early readers, so **no question they are asked may contain
 a letter** — not in the prompt, not on a visible answer button. That is a hard
-constraint on `gen-early.js`, and the audit fails the build on a violation. It is
-what drives several of the design choices in this layer: prompts that are just
-`?`, the `promptIcon` chip, and `choiceDraw` — answer buttons rendered as
-pictures, with the text kept only as a screen-reader label.
+constraint on `gen-early.js`, and the audit fails the build on a violation.
+
+The second half of the rule is that **most of those questions have no prompt at
+all**: where the picture asks the question, a lone `?` above it is one more thing
+to decode. A prompt is emitted only when it *is* the question (`3 + 2 = ?`) or
+when a `promptIcon` chip carries a direction the picture cannot. Where a symbol
+does belong — the `=` in "which group has this many?" — it is drawn *inside* the
+visual (`matchCard`) rather than floated above it.
+
+Two fields exist to make that safe. `choiceDraw` turns answer buttons into
+pictures, keeping the text as a screen-reader label only. `srPrompt` is a
+never-rendered description used as the answer group's accessible name and its
+`aria-live` announcement — the question visual is `aria-hidden`, so without it a
+picture-only question would reach a screen reader with no name at all. The audit
+rejects a question that has neither a visible prompt nor an `srPrompt`.
 
 ### Question visuals
 

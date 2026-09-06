@@ -167,10 +167,6 @@ function fromWording(q) {
     const power = { ones: 1, tens: 10, hundreds: 100, thousands: 1000, 'ten thousands': 10000, 'hundred thousands': 100000 }[m[3]];
     return { value: +m[2] * power, from: 'wording' };
   }
-  if (/^How many corners\?$|^\?$/.test(p) && q.skill === 'shape_corners') {
-    const sides = { triangle: 3, square: 4, diamond: 4, hexagon: 6, star: 5 };
-    return { value: sides[q.visual?.shape], from: 'wording' };
-  }
   if (q.skill === 'div_remainder' && (m = p.match(/^(\d+) ÷ (\d+) = \?$/))) {
     const a = +m[1], b = +m[2];
     return { value: `${Math.floor(a / b)} R${a % b}`, from: 'wording' };
@@ -233,8 +229,6 @@ function fromVisual(q) {
         ? { value: (v.hundreds || 0) * 100 + (v.tens || 0) * 10 + (v.ones || 0), from: 'visual' }
         : null;
 
-    case 'numeralCard':
-      return { value: v.value, from: 'visual' };
 
     case 'lengthUnits':
       return { value: v.units, from: 'visual' };
@@ -284,8 +278,16 @@ function fromVisual(q) {
       return skill === 'doubles' && v.counts
         ? { value: v.counts.reduce((a, b) => a + b, 0), from: 'visual' } : null;
 
-    case 'shapeMatch':
-      return { value: v.shape.charAt(0).toUpperCase() + v.shape.slice(1), from: 'visual' };
+    case 'shape': {
+      // The corner-dotted shapes are the ones the corner count is asked about.
+      const corners = { triangle: 3, square: 4, diamond: 4, hexagon: 6, star: 5 };
+      return v.corners && corners[v.shape] ? { value: corners[v.shape], from: 'visual' } : null;
+    }
+
+    case 'matchCard':
+      return v.left.shape
+        ? { value: v.left.shape.charAt(0).toUpperCase() + v.left.shape.slice(1), from: 'visual' }
+        : { value: v.left.value, from: 'visual' };
 
     case 'numberLine': {
       // Hops chain: the answer is where the last one lands.

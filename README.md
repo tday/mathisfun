@@ -234,23 +234,29 @@ bouncing costs no extra art. Worlds re-tint the same monsters through an HSL
 "mood" shift, which is why 14 worlds do not need 14 sets of sprites.
 
 **Built for readers who cannot yet read.** Below 2nd grade there is no text in a
-question at all — not a simplified sentence, no letters. Pre-K, Kindergarten and
-1st grade are asked entirely through a picture, a drawn icon chip and
-mathematical symbols. Counting is a collection and a `?`. Reading a numeral is a
-numeral card, `= ?`, and answer buttons that are **drawn groups of dots**. Shape
-matching is drawn as `[shape] = [?]`, so it needs no prompt. Sequence questions
-use a number track with a gap (`4 5 ? 7`) instead of the words "before" and
-"after" — which look identical to a pre-reader but have opposite answers.
-Comparison carries a drawn up/down arrow chip and nothing else, and Pre-K only
-ever asks one direction so the convention is learned before it is varied. Place
-value is base-ten blocks, in both directions.
+question at all — not a simplified sentence, no letters — and where the picture
+asks the question, no prompt either. Five apples above three numbered buttons
+does not need a `?` hovering over it; a lone `?` is one more thing on screen for
+a four-year-old to work out. A prompt earns its place only when it *is* the
+question (`3 + 2 = ?`) or when a drawn icon carries a direction the picture
+cannot. So reading a numeral is drawn as `[3] = [?]` with answer buttons that are
+**groups of dots** — the `=` inside the picture, next to the thing it relates.
+Shape matching is the same picture with a shape in the first card. Sequence
+questions are a number track with a gap (`4 5 ? 7`) instead of the words "before"
+and "after", which look identical to a pre-reader but have opposite answers.
+Comparison is a drawn up/down arrow chip over two groups, and Pre-K only ever
+asks one direction so the convention is learned before it is varied. Place value
+is base-ten blocks, read both ways.
 
-Hints stay in English; they are for the adult sitting alongside, and no child is
-ever blocked by one, because a second miss reveals the answer. Every control is a
-drawn icon rather than an emoji, because emoji coverage varies by device and a
-child cannot recover from a control that renders as an empty box. The curriculum
-audit fails the build the moment a letter appears in a band-0-to-2 question, and
-the browser QA suite checks the same thing on the rendered page.
+Quiet on screen is not unlabelled: every question carries a never-rendered
+`srPrompt` used as the answer group's accessible name and its `aria-live`
+announcement, and the audit fails a question that has neither that nor a visible
+prompt. Hints stay in English; they are for the adult sitting alongside, and no
+child is ever blocked by one, because a second miss reveals the answer. Every
+control is a drawn icon rather than an emoji, because emoji coverage varies by
+device and a child cannot recover from a control that renders as an empty box.
+The curriculum audit fails the build the moment a letter appears in a band-0-to-2
+question, and the browser QA suite checks the same thing on the rendered page.
 
 **Touch is locked down.** Small children rest palms on the screen and tap with
 several fingers. `js/core/touchlock.js` blocks pinch-zoom, iOS gesture events,
