@@ -8,10 +8,35 @@ export const BANDS = [
   { band: 0, name: 'Pre-K', blurb: 'Counting & shapes', color: '#7ee0b8' },
   { band: 1, name: 'Kindergarten', blurb: 'Numbers to 20', color: '#8fd0ff' },
   { band: 2, name: '1st Grade', blurb: 'Add & subtract to 20', color: '#b6a4ff' },
-  { band: 3, name: '2nd Grade', blurb: 'Bigger sums & skip counting', color: '#ffd08a' },
-  { band: 4, name: '3rd Grade', blurb: 'Times tables & fractions', color: '#ff9db1' },
-  { band: 5, name: '4th Grade', blurb: 'Long multiplication & decimals', color: '#ff9f6e' },
+  { band: 3, name: '2nd Grade', blurb: 'Numbers to 1,000', color: '#ffd08a' },
+  { band: 4, name: '3rd Grade', blurb: 'Multiplication & fractions', color: '#ff9db1' },
+  { band: 5, name: '4th Grade', blurb: 'Multi-digit maths & fractions', color: '#ff9f6e' },
   { band: 6, name: '5th Grade', blurb: 'Fractions, decimals, order of ops', color: '#c58cff' },
+];
+
+/**
+ * Each world covers a run of Illustrative Mathematics units, in IM's own order.
+ * `unit` is what a grown-up sees on the world card, so a parent or teacher can
+ * line the game up against the classroom sequence; `im` is the citation.
+ *
+ * Pre-K has no IM curriculum of its own, so its two worlds are the readiness
+ * that IM Kindergarten unit 1 assumes: counting a collection, and comparing two.
+ */
+const IM_UNITS = [
+  { unit: 'Math in Our World', im: 'Leads into IM K, Unit 1' },
+  { unit: 'Numbers 1–10', im: 'Leads into IM K, Unit 2' },
+  { unit: 'Numbers & Flat Shapes', im: 'IM K, Units 1–3' },
+  { unit: 'Adding, Subtracting & Numbers to 20', im: 'IM K, Units 4–6' },
+  { unit: 'Adding & Subtracting within 20', im: 'IM Grade 1, Units 1–3' },
+  { unit: 'Numbers to 99, and Length', im: 'IM Grade 1, Units 4–6' },
+  { unit: 'Within 100, and the Number Line', im: 'IM Grade 2, Units 1–4' },
+  { unit: 'Numbers to 1,000, Time & Money', im: 'IM Grade 2, Units 5–9' },
+  { unit: 'Introducing Multiplication & Area', im: 'IM Grade 3, Units 1–3' },
+  { unit: 'Division, Fractions & Perimeter', im: 'IM Grade 3, Units 4–7' },
+  { unit: 'Factors, Place Value & Multi-digit', im: 'IM Grade 4, Units 1, 4, 6' },
+  { unit: 'Fractions, Comparison & Angles', im: 'IM Grade 4, Units 2, 3, 5, 7' },
+  { unit: 'Volume & Multiplying Fractions', im: 'IM Grade 5, Units 1–3' },
+  { unit: 'Decimals & the Coordinate Plane', im: 'IM Grade 5, Units 4–7' },
 ];
 
 const DEF = [
@@ -49,6 +74,7 @@ export const WORLDS = DEF.map((d, i) => {
   const indexInBand = i % 2;
   return {
     ...d,
+    ...IM_UNITS[i],
     id: `g${band}w${indexInBand}`,
     index: i,
     band,

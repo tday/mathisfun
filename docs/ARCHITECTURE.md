@@ -167,20 +167,35 @@ goes through `mulberry32`.
 ## Questions
 
 ```
-questions.js  RAMP[band][worldInBand] → weighted skill pick
+questions.js  RAMP[band][worldInBand] → weighted skill pick (anti-repeat applied)
       ↓       gen-early / gen-mid / gen-upper produce a raw question
       ↓       distractor toolkit + shuffle + validity guards
    Question { skill, prompt, promptIcon, visual, choices, answerIndex,
               answerValue, hint, explain }
 ```
 
+The RAMP follows Illustrative Mathematics K–5 unit by unit; each world names the
+IM units it covers (`worlds.js`), and that label is shown on the world card.
 Difficulty lives in the RAMP's `params(stage)` functions — operand ranges widen,
 harder sub-forms gate in at stage thresholds, skill weights shift so new skills
 phase in while old ones persist as review.
 
-Two invisible supports sit in front of it: the first two questions of any stage
-are a warm-up, and `easeLevel` (raised after repeated misses) shifts the
-effective stage down. The player never sees either.
+Three invisible supports sit in front of it: the first two questions of any stage
+are a warm-up, `easeLevel` (raised after repeated misses) shifts the effective
+stage down, and `makeQuestion(..., { recent })` down-weights the skills asked in
+the last four questions. `play.js` keeps that recent list and additionally
+re-rolls a question whose prompt-and-visual signature is still in a 12-deep
+window. The player never sees any of it; what they notice is that a stage stops
+feeling like a worksheet.
+
+### No reading below 2nd grade
+
+Bands 0–2 are pre- and early readers, so **no question they are asked may contain
+a letter** — not in the prompt, not on a visible answer button. That is a hard
+constraint on `gen-early.js`, and the audit fails the build on a violation. It is
+what drives several of the design choices in this layer: prompts that are just
+`?`, the `promptIcon` chip, and `choiceDraw` — answer buttons rendered as
+pictures, with the text kept only as a screen-reader label.
 
 ### Question visuals
 
@@ -234,11 +249,21 @@ Two suites, deliberately independent:
 
 | Suite | Runs in | Catches |
 | --- | --- | --- |
-| `tools/audit-questions.mjs` | Plain Node | Everything about the maths: 16,800 questions, one correct choice each, plausible distractors, no negatives or zero denominators, answer position unbiased, no reading required in Pre-K/K, no ten-frames above K |
+| `tools/audit-questions.mjs` | Plain Node | Everything about the maths: 16,800 questions, one correct choice each, plausible distractors, no negatives or zero denominators, answer position unbiased, no letters below 2nd grade, no ten-frames above K, every visual spec drawable, and the variety budget |
 | `tools/e2e/run.mjs` | Playwright | Everything about the app: console errors, every scene, a full stage played to results, audio *level*, touch targets, zoom lock, save recovery, offline |
+| `tools/e2e/qa-questions.mjs` | Playwright | Everything about how a question *presents*: ~670 questions played through the real UI across all 14 worlds — visuals actually paint, answer buttons are drawn and tappable, correct answers are accepted, wrong ones stay gentle, and no letter reaches a pre-reader's screen |
 
-Plus two review helpers that produce images for a human to look at:
-`tools/e2e/art-check.mjs` (character contact sheet) and
+**The audit's second opinion.** A generator decides both the question and its
+answer, so a buggy generator produces something internally consistent and
+completely wrong. `tools/answer-solver.mjs` re-derives the answer from the
+rendered question alone — the prompt string and the visual spec — and imports no
+generator. All 16,800 questions are re-solved and must agree. That check is what
+found the equal-fractions comparison, the ambiguous "what is the 5 worth?", and
+the decimal division whose displayed answer was rounded into being wrong.
+
+Plus three review helpers that produce images for a human to look at:
+`tools/e2e/art-check.mjs` (character contact sheet),
+`tools/e2e/visual-check.mjs` (every question visual at card size) and
 `tools/e2e/mobile-review.mjs` (every screen at phone size).
 
 `?debug=1` exposes `window.__mmd` with `state()`, `question()`, `scene()`,

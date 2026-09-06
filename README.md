@@ -82,29 +82,43 @@ out. Spending becomes the exercise. A stage clear earns 1 token, a three-star
 clear 2, and a duplicate hands one straight back — so a repeat is never a loss,
 and no real money is involved anywhere.
 
-### Curriculum
+### Curriculum — Illustrative Mathematics K–5
 
-Two worlds per band; operand ranges widen and harder forms gate in by stage.
+Each world covers a run of **Illustrative Mathematics** units, in IM's own order,
+and says which ones on the world card. The point is not the citation: IM teaches
+each idea through a particular representation — a collection counted however it is
+arranged, a number bond, base-ten blocks, a number line, an array, a fraction
+with a place on the line — and the questions here are asked *through those
+pictures*, so a child who plays a world recognises the same ones in class.
 
 | Band | World 1 | World 2 |
 | --- | --- | --- |
-| Pre-K | Count 1–10, shapes | More/fewer, biggest/smallest |
-| Kindergarten | Ten-frames to 20, numerals | ± within 5, one more/less |
-| 1st | ± within 10 → 20 | Missing addend, place value, compare |
-| 2nd | ± within 100 with regrouping, skip counting | Repeated addition → arrays |
-| 3rd | × facts (2·5·10 → 3·4 → 6·7·8·9) | ÷ facts, first fractions |
-| 4th | Multi-digit ×, ÷ with remainders | Fraction compare/equivalence, decimals |
-| 5th | Fraction ± (like → unlike) | Decimal ops, order of operations |
+| Pre-K | *Math in Our World* — counting collections, shapes | *Numbers 1–10* — more/fewer, biggest/smallest |
+| Kindergarten | *IM K, Units 1–3* — ten-frames, numeral ↔ quantity, flat shapes | *IM K, Units 4–6* — add/subtract, number bonds, to 20 |
+| 1st | *IM 1, Units 1–3* — within 20, doubles, make-ten, data | *IM 1, Units 4–6* — base ten to 99, within 100, length |
+| 2nd | *IM 2, Units 1–4* — within 100, the number line, measuring | *IM 2, Units 5–9* — to 1,000, money, time, equal groups |
+| 3rd | *IM 3, Units 1–3* — introducing multiplication, area | *IM 3, Units 4–7* — division, fractions on a line, perimeter |
+| 4th | *IM 4, Units 1, 4, 6* — factors, place value, multi-digit × ÷ | *IM 4, Units 2, 3, 5, 7* — fractions, comparison, angles |
+| 5th | *IM 5, Units 1–3* — volume, multiplying fractions | *IM 5, Units 4–7* — decimals, coordinate plane |
+
+Pre-K has no IM curriculum of its own, so its worlds are the readiness IM
+Kindergarten unit 1 assumes.
+
+Seventy skills rotate across the fourteen worlds, six to eight per world. The
+ramp is told which skills came up recently and steers away from them, and an
+exact repeat still in the recent window is re-rolled — so a stage does not turn
+into the same question five times.
 
 Distractors model real mistakes rather than random numbers: dropped carries,
 digit swaps, neighbour times-table facts (6×7 → 48), adding fractions straight
-across, "longer decimal is bigger", left-to-right order of operations.
+across, "longer decimal is bigger", left-to-right order of operations, perimeter
+confused with area, swapped coordinates.
 
 ---
 
 ## Verifying changes
 
-Two independent checks. Run both before shipping.
+Three independent checks. Run all of them before shipping.
 
 ### 1. Curriculum audit (no browser needed)
 
@@ -119,9 +133,17 @@ It generates ~17,000 questions across all 140 stages and asserts that each has
 exactly one correct choice, no duplicate or malformed distractors, no negative
 numbers offered to young children, no zero denominators, a hint and an
 explanation, a well-formed visual spec, that the correct answer's position is
-uniformly distributed within each choice count, and that **no Pre-K or
-Kindergarten question depends on reading** — a direction word without its icon,
-or before/after wording, fails the audit.
+uniformly distributed within each choice count, that the variety budget holds,
+and that **nothing below 2nd grade contains a letter** — in the prompt or on a
+visible answer button.
+
+It also takes a **second opinion on every answer**. A generator writes both the
+question and its answer, so a bug there produces something internally consistent
+and completely wrong. `tools/answer-solver.mjs` re-derives the answer from the
+rendered question alone — the prompt string and the visual spec — importing no
+generator, and all 16,800 must agree. That check is what caught a "which fraction
+is greater?" between 1/2 and 3/6, an ambiguous "in 455, what is the 5 worth?",
+and a division whose displayed answer had been rounded into being wrong.
 
 ### 2. Browser smoke tests
 
@@ -138,6 +160,25 @@ hearts untouched, coins still paid), shop and pause pausing *and resuming*, the
 capsule machine's token arithmetic, 48px+ touch targets and no page scroll at
 390×844 and 844×390, **simulated pinch and double-tap proving the zoom lock
 holds**, recovery from a corrupt or outdated save, and offline reload.
+
+### 3. Question QA in the real UI
+
+```bash
+node tools/e2e/qa-questions.mjs      # WORLDS=g0w0 STAGES=1,5 to narrow it
+```
+
+Plays ~670 questions across all fourteen worlds by actually clicking the buttons:
+every declared visual paints something, every answer button is drawn and at least
+48px, the right answer is accepted and the game moves on, a wrong one keeps every
+heart and offers a hint, and **no letter reaches the screen below 2nd grade**.
+
+Two helpers render images for a human to judge, since neither suite can tell you
+a picture is unreadable:
+
+```bash
+node tools/e2e/visual-check.mjs      # every question visual at card size
+node tools/e2e/art-check.mjs         # character contact sheet
+```
 
 It also measures **real audio output** with an AnalyserNode on the master bus.
 A `ready` flag proves nothing: music used to be requested before the audio
@@ -169,7 +210,7 @@ js/gfx/      toybox (the shared drawing kit), sprites-units, sprites-world,
 js/data/     worlds, questions + gen-early/mid/upper, tuning   ← DOM-free
 js/scenes/   title, worldSelect, map, play, waves, results, gallery
 js/ui/       dom, hud, questionPanel, panels (shop/settings/gacha/collection)
-tools/       audit-questions.mjs, e2e/
+tools/       audit-questions.mjs, answer-solver.mjs, e2e/
 ```
 
 One rule keeps a build-free project maintainable — imports only ever flow one way:
@@ -192,15 +233,24 @@ per-frame cost is just `drawImage`. Squash and stretch is a transform, so
 bouncing costs no extra art. Worlds re-tint the same monsters through an HSL
 "mood" shift, which is why 14 worlds do not need 14 sets of sprites.
 
-**Built for readers who cannot yet read.** No question depends on decoding a
-word. Sequence questions use a number track with a gap (`4 5 6 ?`) instead of the
-words "before" and "after" — which look identical to a pre-reader but have
-opposite answers. Comparison questions carry a drawn up/down arrow chip, and
-Pre-K only ever asks one direction so the convention is learned before it is
-varied. Every control is a drawn icon rather than an emoji, because emoji
-coverage varies by device and a child cannot recover from a control that renders
-as an empty box. The curriculum audit fails the build if a Pre-K or Kindergarten
-prompt reintroduces either problem.
+**Built for readers who cannot yet read.** Below 2nd grade there is no text in a
+question at all — not a simplified sentence, no letters. Pre-K, Kindergarten and
+1st grade are asked entirely through a picture, a drawn icon chip and
+mathematical symbols. Counting is a collection and a `?`. Reading a numeral is a
+numeral card, `= ?`, and answer buttons that are **drawn groups of dots**. Shape
+matching is drawn as `[shape] = [?]`, so it needs no prompt. Sequence questions
+use a number track with a gap (`4 5 ? 7`) instead of the words "before" and
+"after" — which look identical to a pre-reader but have opposite answers.
+Comparison carries a drawn up/down arrow chip and nothing else, and Pre-K only
+ever asks one direction so the convention is learned before it is varied. Place
+value is base-ten blocks, in both directions.
+
+Hints stay in English; they are for the adult sitting alongside, and no child is
+ever blocked by one, because a second miss reveals the answer. Every control is a
+drawn icon rather than an emoji, because emoji coverage varies by device and a
+child cannot recover from a control that renders as an empty box. The curriculum
+audit fails the build the moment a letter appears in a band-0-to-2 question, and
+the browser QA suite checks the same thing on the rendered page.
 
 **Touch is locked down.** Small children rest palms on the screen and tap with
 several fingers. `js/core/touchlock.js` blocks pinch-zoom, iOS gesture events,

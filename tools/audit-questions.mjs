@@ -10,6 +10,9 @@
 import { WORLDS, STAGES_PER_WORLD } from '../js/data/worlds.js';
 import { makeQuestion } from '../js/data/questions.js';
 import { mulberry32 } from '../js/core/utils.js';
+import { solve, agrees } from './answer-solver.mjs';
+import { PROPS } from '../js/gfx/sprites-world.js';
+import { COUNTABLES } from '../js/data/gen-early.js';
 
 const PER_STAGE = Number(process.env.N || 120);
 const problems = [];
@@ -17,7 +20,9 @@ const problems = [];
 // flat tally would look "biased" when it is simply a different question shape.
 const positions = new Map();
 const skillCounts = new Map();
+const solvedBySkill = new Map();
 let total = 0;
+let solved = 0;
 
 function fail(world, stage, q, msg) {
   problems.push(`${world.id} s${stage} [${q?.skill}] ${msg} :: ${JSON.stringify({
@@ -65,13 +70,37 @@ for (const world of WORLDS) {
       bucket[q.answerIndex]++;
       positions.set(texts.length, bucket);
 
-      // Pre-K and Kindergarten must never hinge on reading a single word. If a
-      // prompt names a direction, a drawn chip has to carry it too.
-      if (world.band <= 1 && /\b(MORE|FEWER|BIGGER|SMALLER|BIGGEST|SMALLEST)\b/.test(q.prompt || '')) {
-        if (!q.promptIcon) fail(world, stage, q, 'direction word with no icon for a pre-reader');
+      // Independent second opinion: re-derive the answer from the prompt and
+      // the picture alone (tools/answer-solver.mjs) and check it agrees. This is
+      // the check that catches a generator that is confidently wrong.
+      const check = solve(q);
+      if (check) {
+        solved++;
+        solvedBySkill.set(q.skill, (solvedBySkill.get(q.skill) || 0) + 1);
+        if (!agrees(check, q)) {
+          fail(world, stage, q, check.check
+            ? `solver disagrees: exactly one choice should be ${check.describe}`
+            : `solver disagrees (${check.from} says ${check.value})`);
+        }
       }
-      if (world.band <= 1 && /\b(before|after)\b/i.test(q.prompt || '')) {
-        fail(world, stage, q, 'before/after wording requires reading');
+
+      // Everyone below 2nd grade is a pre- or early reader, so nothing they are
+      // asked may hinge on decoding a word. Not "keep the words simple" —
+      // no letters at all, in the prompt or in any answer button. The question
+      // is carried by the picture, a drawn icon chip and maths symbols.
+      if (world.band <= 2) {
+        if (/[A-Za-z]/.test(q.prompt || '')) {
+          fail(world, stage, q, 'prompt contains words a pre-reader cannot decode');
+        }
+        for (const c of q.choices) {
+          // A drawn choice may carry text as its screen-reader label only.
+          if (!c.draw && /[A-Za-z]/.test(c.text)) {
+            fail(world, stage, q, `answer choice "${c.text}" needs reading`);
+          }
+        }
+        if (!q.visual && !q.promptIcon && !/[0-9]/.test(q.prompt || '')) {
+          fail(world, stage, q, 'nothing to go on: no visual, no icon, no numerals');
+        }
       }
 
       // The ten-frame is a Kindergarten counting tool. Past that it is visual
@@ -84,16 +113,37 @@ for (const world of WORLDS) {
       if (q.visual) {
         const v = q.visual;
         const ok = {
-          countRow: () => v.count > 0 && !!v.sprite,
+          countRow: () => v.count > 0 && !!v.sprite
+            && (v.arrange == null || ['grid', 'row', 'scatter', 'dice'].includes(v.arrange)),
           countGroups: () => Array.isArray(v.groups) && v.groups.every((g) => g.count > 0 && g.sprite),
           tenFrame: () => v.count > 0,
           compareGroups: () => v.left?.count > 0 && v.right?.count > 0,
-          dotArray: () => v.rows > 0 && v.cols > 0,
+          dotArray: () => (v.counts ? v.counts.length > 0 && v.counts.every((c) => c > 0) : v.rows > 0 && v.cols > 0),
           fractionBar: () => (v.bars ? v.bars.every((b) => b.den > 0) : v.den > 0),
           fractionCircle: () => v.den > 0 && v.num >= 0,
           numberLine: () => Number.isFinite(v.min) && Number.isFinite(v.max) && v.max > v.min,
           shape: () => !!v.shape,
           numberTrack: () => Array.isArray(v.cells) && v.cells.length >= 2 && v.cells.filter((c) => c === null).length === 1,
+          shapeMatch: () => !!v.shape,
+          numeralCard: () => Number.isFinite(v.value),
+          numberBond: () => Array.isArray(v.parts) && v.parts.length === 2
+            && [v.whole, ...v.parts].filter((x) => x == null).length <= 1
+            && [v.whole, ...v.parts].every((x) => x == null || Number.isFinite(x)),
+          baseTen: () => (v.hundreds || 0) + (v.tens || 0) + (v.ones || 0) > 0
+            && [v.hundreds, v.tens, v.ones].every((x) => x == null || (Number.isInteger(x) && x >= 0 && x <= 10)),
+          lengthUnits: () => v.units > 0 && (v.span == null || v.span >= v.units),
+          pictureGraph: () => Array.isArray(v.rows) && v.rows.length > 0
+            && v.rows.every((r) => r.count > 0 && r.sprite),
+          equalGroups: () => v.groups > 0 && v.each > 0 && !!v.sprite,
+          money: () => Array.isArray(v.coins) && v.coins.length > 0 && v.coins.every((c) => c > 0),
+          areaGrid: () => v.rows > 0 && v.cols > 0,
+          perimeterShape: () => v.w > 0 && v.h > 0,
+          fractionLine: () => v.den > 0 && (v.at == null || (v.at >= 0 && v.at <= v.den * (v.whole || 1))),
+          angle: () => v.degrees > 0 && v.degrees < 360,
+          prism: () => v.l > 0 && v.wd > 0 && v.ht > 0,
+          coordGrid: () => v.span > 0 && (!v.point || (v.point[0] >= 0 && v.point[1] >= 0
+            && v.point[0] <= v.span && v.point[1] <= v.span)),
+          clock: () => v.hour >= 1 && v.hour <= 12 && v.minute >= 0 && v.minute < 60,
         }[v.kind];
         if (!ok) fail(world, stage, q, `unknown visual kind "${v.kind}"`);
         else if (!ok()) fail(world, stage, q, `invalid ${v.kind} visual: ${JSON.stringify(v)}`);
@@ -102,9 +152,66 @@ for (const world of WORLDS) {
   }
 }
 
+// A question that asks for a sprite the art does not have renders as an empty
+// box, which is unanswerable and silent. The two lists live in different layers
+// on purpose (data/ stays DOM-free), so check them against each other here.
+for (const name of COUNTABLES) {
+  if (!PROPS[name]) problems.push(`countable "${name}" has no sprite in gfx/sprites-world.js`);
+}
+
+// ---------------------------------------------------------------- repetition
+//
+// A stage of individually-good questions can still feel like a worksheet if it
+// asks the same skill five times running. Replays the ramp exactly as play.js
+// drives it (recent-skill steering plus an exact-repeat re-roll) and holds the
+// result to a budget, so the variety cannot quietly regress.
+const PER_SESSION = 24;
+let runOn = 0, exactRepeat = 0, asked = 0;
+const worldSkills = [];
+
+for (const world of WORLDS) {
+  const skills = new Set();
+  for (let stage = 1; stage <= STAGES_PER_WORLD; stage++) {
+    const recentSkills = [], recentPrompts = [];
+    const seen = new Set();
+    let prev = null;
+    for (let i = 0; i < PER_SESSION; i++) {
+      const sig = (q) => `${q.prompt}|${JSON.stringify(q.visual)}`;
+      let q = null;
+      for (let a = 0; a < 6; a++) {
+        q = makeQuestion(world, stage, {
+          warmup: i < 2, index: i + a * 1000, seed: world.mapSeed, recent: recentSkills,
+        });
+        if (!recentPrompts.includes(sig(q))) break;
+      }
+      recentSkills.unshift(q.skill);
+      recentSkills.length = Math.min(recentSkills.length, 4);
+      recentPrompts.unshift(sig(q));
+      recentPrompts.length = Math.min(recentPrompts.length, 12);
+
+      if (prev === q.skill) runOn++;
+      if (seen.has(sig(q))) exactRepeat++;
+      seen.add(sig(q));
+      skills.add(q.skill);
+      prev = q.skill;
+      asked++;
+    }
+  }
+  worldSkills.push([world.id, skills.size]);
+  if (skills.size < 5) problems.push(`${world.id} only ever asks ${skills.size} distinct skills`);
+}
+
+const runPct = (runOn / asked) * 100;
+const repeatPct = (exactRepeat / asked) * 100;
+if (runPct > 15) problems.push(`same skill twice in a row ${runPct.toFixed(1)}% of the time (budget 15%)`);
+if (repeatPct > 12) problems.push(`identical question repeats within a stage ${repeatPct.toFixed(1)}% of the time (budget 12%)`);
+
 // Answer position must not be predictable — kids notice patterns fast.
 console.log(`Generated ${total} questions across ${WORLDS.length} worlds x ${STAGES_PER_WORLD} stages.`);
+console.log(`Variety: same skill back-to-back ${runPct.toFixed(1)}%, identical question repeated ${repeatPct.toFixed(1)}%, `
+  + `${Math.min(...worldSkills.map((w) => w[1]))}-${Math.max(...worldSkills.map((w) => w[1]))} skills per world.`);
 console.log(`Distinct skills exercised: ${skillCounts.size}`);
+console.log(`Independently re-solved: ${solved} (${(solved / total * 100).toFixed(1)}%)`);
 for (const [n, bucket] of [...positions.entries()].sort((a, b) => a[0] - b[0])) {
   const sum = bucket.reduce((a, b) => a + b, 0);
   const share = bucket.map((p) => p / sum);
@@ -116,8 +223,11 @@ for (const [n, bucket] of [...positions.entries()].sort((a, b) => a[0] - b[0])) 
 }
 
 const bySkill = [...skillCounts.entries()].sort((a, b) => b[1] - a[1]);
-console.log('\nSkill coverage:');
-for (const [skill, n] of bySkill) console.log(`  ${String(n).padStart(5)}  ${skill}`);
+console.log('\nSkill coverage (· = share the solver could re-derive):');
+for (const [skill, n] of bySkill) {
+  const v = solvedBySkill.get(skill) || 0;
+  console.log(`  ${String(n).padStart(5)}  ${skill.padEnd(22)} ${v === n ? 'verified' : v ? `${(v / n * 100).toFixed(0)}% verified` : '—'}`);
+}
 
 // Every skill declared in the ramp should actually be reachable.
 const declared = new Set();

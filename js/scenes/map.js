@@ -107,7 +107,7 @@ export function createMap() {
       const bar = el('div', { class: 'hud' },
         button('', { cls: 'icon ghost', audio: game.audio, ariaLabel: 'Back to worlds', icon: 'iconBack', game },
           () => game.engine.go('worldSelect')),
-        el('div', { class: 'pill' }, `${world.bandName}`),
+        el('div', { class: 'pill', title: world.im }, `${world.bandName} · ${world.unit}`),
         el('div', { class: 'spacer' }),
         el('div', { class: 'pill', 'aria-label': `${game.save.data.tokens || 0} capsule tokens` },
           spriteImg(game.sprites.prop('token', 24), 24),

@@ -83,6 +83,16 @@ Caught by rendering the icon and counting white pixels above versus below the
 centre. **When an asset encodes a fact, assert the fact, not the asset's
 existence.**
 
+The rule later got stricter, and stricter turned out to be *easier*. "Keep the
+words simple for young players" is a judgement call, and judgement calls decay:
+1st grade had drifted into "How many tens in 47?" and "3 tens and 5 ones = ?"
+without anyone deciding it should. "No letters at all below 2nd grade" is not a
+judgement call, it is a regex, and the audit runs it on every question. Forcing
+every early question through pictures and symbols also made them *better*: a
+numeral card with drawn dot-groups for answers, base-ten blocks read in both
+directions, and `[shape] = [?]` are all sharper questions than the sentences they
+replaced. **A bright line you can test beats a principle you have to interpret.**
+
 ---
 
 ## Constrain the machine so the machine can check the work
@@ -102,11 +112,67 @@ documented:
 - no negative numbers or zero denominators
 - exactly one correct choice, no duplicates
 - answer position uniform within each choice count
-- no Pre-K/K question that requires reading
+- no letters at all in a question below 2nd grade
 - no ten-frames above Kindergarten
+- every visual spec is one `fx.js` can actually draw
+- the variety budget: same skill back-to-back, identical question repeated
 
 Every one of those started as a bug or a note, and became a rule that cannot
 silently regress.
+
+---
+
+## Ask a second opinion, from something that never saw the answer
+
+The audit above checks that a question is *well formed*. It cannot check that it
+is *right*, because the generator writes the question and the answer together: a
+generator with a bug produces a perfectly consistent question with a wrong answer
+and sails through every structural check.
+
+`tools/answer-solver.mjs` fixes that by re-deriving the answer from the rendered
+question alone — the prompt string a child reads and the visual spec they look
+at — and it deliberately imports no generator. All 16,800 questions must agree
+with it. Writing it took an afternoon and it immediately found three real bugs
+that had survived every other check:
+
+- **`fraction_compare` asking which of 1/2 and 3/6 is greater.** The guard against
+  equal fractions decremented one numerator, and `Math.max(1, 1 - 1)` is 1, so
+  whenever the numerator was already 1 the guard silently did nothing.
+- **"In 455, what is the 5 worth?"** — two defensible answers, both on the
+  buttons. The fix was to name the place, not just the digit, which is how IM
+  phrases it anyway.
+- **`1.97 ÷ 100` answered "0.02".** The generator produced a four-decimal result
+  and the three-decimal formatter rounded it into being wrong.
+
+Two lessons past the bugs themselves. First, the tolerance in the comparison is
+load-bearing: an early version accepted "agrees to however many decimals the
+button shows", which made the third bug *pass*. A float tolerance (1e-9) is the
+right latitude; display rounding is not. Second, for questions whose prompt is a
+sentence rather than an expression, the solver returns a **predicate** — "exactly
+one choice is a factor of 24" — checked against every button. That form catches
+a mis-selected answer and an ambiguous question with the same test, which is how
+the place-value bug surfaced.
+
+---
+
+## Variety is a property of a session, not of a question
+
+Every individual question in Pre-K passed the audit and the world still felt like
+a worksheet: 56% of the time the next question used the *same skill* as the last
+one, and a third of the questions in a stage were exact repeats. Three worlds had
+only three skills between them.
+
+Nothing about that is visible when you check questions one at a time. The fix was
+in three places, and so is the test:
+
+- more skills per world (3–4 → 6–8), drawn from IM's own unit sequence
+- `makeQuestion(..., { recent })` down-weights the last four skills asked
+- `play.js` re-rolls a question whose prompt-and-visual signature is still in a
+  twelve-deep window
+
+The audit now replays the ramp exactly as `play.js` drives it and holds the
+result to a budget. Back-to-back repeats went 38% → 5%, exact repeats 13% → 3%.
+The metric had to exist before the problem was fixable.
 
 **Everything gameplay-random is seeded on `(worldId, stage)`.** Stages are
 byte-identical every run, which is what lets the browser suite play a whole stage

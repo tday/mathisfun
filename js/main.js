@@ -13,6 +13,7 @@ import { createMap } from './scenes/map.js';
 import { createPlay } from './scenes/play.js';
 import { createResults } from './scenes/results.js';
 import { createGallery } from './scenes/gallery.js';
+import { WORLDS } from './data/worlds.js';
 
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has('debug');
@@ -74,6 +75,9 @@ function boot() {
       question: () => engine.current?.debugQuestion?.() ?? null,
       go: (n, p) => engine.go(n, p),
       save: () => save.data,
+      worlds: () => WORLDS.map((w) => ({
+        id: w.id, name: w.name, band: w.band, indexInBand: w.indexInBand, unit: w.unit, im: w.im,
+      })),
     };
   }
 

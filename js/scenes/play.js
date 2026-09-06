@@ -28,6 +28,7 @@ export function createPlay() {
   let enemies, spawnIdx, projectiles, particles;
   let hearts, maxHearts, shields, coinsEarned, streak, bestStreak;
   let time, questionIndex, missStreak, easeLevel, assisted, correctCount, attempts;
+  let recentSkills, recentPrompts;
   let over, outcome, waveShown, castleHit, heroCast, heroCheer, blinkT;
   let hud, qpanel, backdrop, backdropKey, view;
   let currentQuestion, tries, resolving;
@@ -62,13 +63,31 @@ export function createPlay() {
 
   const unitSize = () => clamp(Math.min(view.w, view.h) * 0.17, 54, 128);
 
+  /**
+   * A stage that asks the same skill five times running, or repeats a question
+   * verbatim, reads as a worksheet however good the individual questions are.
+   * Two guards: the ramp is told what was asked recently so it can steer away,
+   * and an exact repeat of anything still in the window is re-rolled.
+   */
   function nextQuestion() {
-    currentQuestion = makeQuestion(world, stage, {
-      easeLevel,
-      warmup: questionIndex < 2,
-      index: questionIndex,
-      seed: hash(world.id, stage, 'q'),
-    });
+    const sig = (q) => `${q.prompt}|${JSON.stringify(q.visual)}`;
+    let q = null;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      q = makeQuestion(world, stage, {
+        easeLevel,
+        warmup: questionIndex < 2,
+        index: questionIndex + attempt * 1000,
+        seed: hash(world.id, stage, 'q'),
+        recent: recentSkills,
+      });
+      if (!recentPrompts.includes(sig(q))) break;
+    }
+    recentSkills.unshift(q.skill);
+    recentSkills.length = Math.min(recentSkills.length, 4);
+    recentPrompts.unshift(sig(q));
+    recentPrompts.length = Math.min(recentPrompts.length, 12);
+
+    currentQuestion = q;
     questionIndex++;
     tries = 0;
     resolving = false;
@@ -333,6 +352,8 @@ export function createPlay() {
       bestStreak = 0;
       time = 0;
       questionIndex = 0;
+      recentSkills = [];
+      recentPrompts = [];
       missStreak = 0;
       easeLevel = 0;
       assisted = false;
@@ -550,6 +571,7 @@ export function createPlay() {
       return {
         world: world.id, stage, hearts, maxHearts, coinsEarned, enemies: enemies.length,
         spawnsLeft: plan.spawns.length - spawnIdx, over, outcome, correctCount, attempts,
+        band: world.band,
         boss: enemies.some((e) => e.boss && e.alive),
         bossHp: enemies.find((e) => e.boss)?.hp ?? null,
       };
@@ -561,6 +583,8 @@ export function createPlay() {
           answerIndex: currentQuestion.answerIndex,
           choices: currentQuestion.choices.map((c) => c.text),
           skill: currentQuestion.skill,
+          visual: currentQuestion.visual,
+          promptIcon: currentQuestion.promptIcon,
           tries,
         }
         : null;

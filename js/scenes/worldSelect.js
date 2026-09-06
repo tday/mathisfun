@@ -8,7 +8,6 @@ import { el, clear, button, overlay, panel } from '../ui/dom.js';
 import { drawSkyDecor, drawGround } from '../gfx/fx.js';
 import { palette } from '../gfx/palettes.js';
 import { BANDS, WORLDS, isWorldUnlocked, worldProgress, worldsInBand } from '../data/worlds.js';
-import { MONSTERS } from '../gfx/sprites-units.js';
 
 export function createWorldSelect() {
   let game, t = 0;
@@ -47,13 +46,17 @@ export function createWorldSelect() {
       type: 'button',
       disabled: !unlocked || undefined,
       'aria-label': unlocked
-        ? `${world.name}, ${world.bandName}, ${prog.stars} of ${prog.max} stars`
+        ? `${world.name}, ${world.bandName}, ${world.unit}, ${world.im}, ${prog.stars} of ${prog.max} stars`
         : `${world.name} is locked. Finish ${WORLDS[world.index - 1]?.name} to open it.`,
     },
       preview,
       el('div', { class: 'wc-body' },
         el('div', { class: 'wc-name' }, world.name),
-        el('div', { class: 'wc-sub' }, unlocked ? `${MONSTERS[world.enemies[0]].name} & friends` : 'Finish the world before this'),
+        // The curriculum label is for the grown-up choosing a world, not the
+        // child playing it, so it sits under the friendly name rather than
+        // replacing it.
+        el('div', { class: 'wc-unit' }, unlocked ? world.unit : 'Finish the world before this'),
+        el('div', { class: 'wc-sub' }, unlocked ? world.im : ''),
         stars,
       ),
     );

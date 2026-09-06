@@ -88,6 +88,81 @@ const block = (ctx) => {
   roundRectPath(ctx, 14, 22, 72, 66, 14); ink(ctx, 3.4);
 };
 
+// Five more countables so a stage of counting questions does not show the same
+// apple twenty times. Variety in the objects is what stops "How many?" from
+// feeling like one question asked over and over.
+
+const leaf = (ctx) => {
+  groundShadow(ctx, 50, 92, 24, 6, 0.14);
+  ctx.beginPath();
+  ctx.moveTo(50, 90);
+  ctx.quadraticCurveTo(8, 62, 26, 20);
+  ctx.quadraticCurveTo(72, 16, 74, 58);
+  ctx.quadraticCurveTo(70, 84, 50, 90);
+  ctx.closePath();
+  fill(ctx, '#7ed99a'); ink(ctx, 3);
+  ctx.beginPath();
+  ctx.moveTo(50, 90);
+  ctx.quadraticCurveTo(44, 52, 34, 28);
+  ctx.lineWidth = 4; ctx.strokeStyle = withAlpha(INK, 0.55); ctx.lineCap = 'round';
+  ctx.stroke();
+};
+
+const flower = (ctx) => {
+  groundShadow(ctx, 50, 92, 22, 6, 0.14);
+  ctx.beginPath();
+  ctx.moveTo(50, 90); ctx.quadraticCurveTo(56, 70, 50, 54);
+  ctx.lineWidth = 6; ctx.strokeStyle = '#5fbf78'; ctx.lineCap = 'round'; ctx.stroke();
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+    ctx.beginPath();
+    ctx.ellipse(50 + Math.cos(a) * 22, 44 + Math.sin(a) * 22, 15, 15, 0, 0, Math.PI * 2);
+    fill(ctx, '#ff9ec4'); ink(ctx, 2.8);
+  }
+  ctx.beginPath(); ctx.arc(50, 44, 13, 0, Math.PI * 2);
+  fill(ctx, '#ffd34e'); ink(ctx, 2.8);
+};
+
+const fish = (ctx) => {
+  groundShadow(ctx, 50, 92, 24, 6, 0.12);
+  ctx.beginPath();
+  ctx.moveTo(24, 52);
+  ctx.quadraticCurveTo(48, 20, 76, 52);
+  ctx.quadraticCurveTo(48, 84, 24, 52);
+  ctx.closePath();
+  fill(ctx, '#6fd3ff'); ink(ctx, 3);
+  ctx.beginPath();
+  ctx.moveTo(24, 52); ctx.lineTo(6, 34); ctx.lineTo(8, 70); ctx.closePath();
+  fill(ctx, '#4fbdf0'); ink(ctx, 2.8);
+  eye(ctx, 64, 46, 5, { iris: '#2b1633' });
+};
+
+const balloon = (ctx) => {
+  ctx.beginPath();
+  ctx.moveTo(50, 74); ctx.quadraticCurveTo(58, 84, 48, 94);
+  ctx.lineWidth = 3.4; ctx.strokeStyle = INK; ctx.lineCap = 'round'; ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(50, 44, 27, 32, 0, 0, Math.PI * 2);
+  fill(ctx, '#c9a4f0'); ink(ctx, 3);
+  ctx.beginPath();
+  ctx.moveTo(44, 74); ctx.lineTo(56, 74); ctx.lineTo(50, 82); ctx.closePath();
+  fill(ctx, '#b189e4'); ink(ctx, 2.4);
+  ctx.save(); ctx.globalAlpha = 0.55;
+  ctx.beginPath(); ctx.ellipse(40, 32, 8, 12, -0.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.restore();
+};
+
+const cookie = (ctx) => {
+  groundShadow(ctx, 50, 90, 26, 7, 0.16);
+  ctx.beginPath(); ctx.arc(50, 52, 34, 0, Math.PI * 2);
+  fill(ctx, '#e6b877'); ink(ctx, 3);
+  for (const [x, y] of [[38, 40], [60, 44], [46, 62], [64, 66], [52, 30]]) {
+    ctx.beginPath(); ctx.arc(x, y, 5.4, 0, Math.PI * 2);
+    ctx.fillStyle = '#6b4326'; ctx.fill();
+  }
+};
+
 const dot = (ctx, o = {}) => {
   ctx.beginPath();
   ctx.arc(50, 50, 38, 0, Math.PI * 2);
@@ -528,12 +603,16 @@ const iconMore = (ctx) => arrowChip(ctx, true, '#57cc7a');
 const iconFewer = (ctx) => arrowChip(ctx, false, '#6fa8e8');
 
 export const PROPS = {
-  apple, star, duck, shell, block, dot,
+  apple, star, duck, shell, block, leaf, flower, fish, balloon, cookie, dot,
   coin, heart, shield, capsule, gachaMachine,
   castle, bossCastle, tree, rock, bush, lock, bolt, token,
   iconPause, iconShop, iconSoundOn, iconSoundOff, iconBack, iconPlay,
   iconArrow, iconAlbum, iconRetry, iconMap, iconMore, iconFewer,
 };
 
-/** Countable sprites available to the early-grade question visuals. */
-export const COUNTABLES = ['apple', 'star', 'duck', 'shell', 'block'];
+/**
+ * Countable sprites available to the early-grade question visuals. The question
+ * generators keep their own copy of this list — `js/data/` may not import from
+ * `js/gfx/` — and `tools/audit-questions.mjs` asserts the two agree.
+ */
+export const COUNTABLES = ['apple', 'star', 'duck', 'shell', 'block', 'leaf', 'flower', 'fish', 'balloon', 'cookie'];

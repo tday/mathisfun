@@ -66,7 +66,7 @@ export class QuestionPanel {
         'aria-label': choice.draw ? choice.text : undefined,
       });
       if (choice.draw) {
-        b.append(this._graphic(choice.draw, 46));
+        b.append(this._graphic(choice.draw, 96));
         b.append(el('span', { class: 'sr-only' }, choice.text));
       } else {
         b.textContent = choice.text;
@@ -82,21 +82,34 @@ export class QuestionPanel {
     void band;
   }
 
+  /**
+   * Answer buttons that are pictures rather than text — the only way to ask a
+   * pre-reader "which group has this many?" without a single word on screen.
+   */
   _graphic(draw, size) {
-    const c = el('canvas');
+    const w = draw.kind === 'baseTen' ? size * 1.6 : size;
+    // Drawn at a generous fixed size and then *sized by CSS*, so the picture
+    // grows with the button instead of sitting as a stamp in the middle of a
+    // full-width one on a phone. The backing store is always the larger of the
+    // two, so it is downscaled rather than blurred.
+    const c = el('canvas', { class: 'qchoice' });
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    c.width = size * dpr;
+    c.width = w * dpr;
     c.height = size * dpr;
-    c.style.width = `${size}px`;
-    c.style.height = `${size}px`;
     const ctx = c.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.translate(size / 2, size / 2);
     if (draw.kind === 'shape') {
+      ctx.translate(w / 2, size / 2);
       drawShapePath(ctx, draw.shape, size * 0.4);
       ctx.fillStyle = draw.color || '#ffd34e';
       ctx.fill();
       ink(ctx, 3);
+    } else {
+      // Always the same arrangement across a question's buttons: mixing a dice
+      // face with a grid makes two answers look like two different questions.
+      drawQuestionVisual(ctx, draw.kind === 'dots'
+        ? { kind: 'countRow', sprite: 'dot', count: draw.n, arrange: 'grid' }
+        : draw, this.game.sprites, w, size);
     }
     return c;
   }

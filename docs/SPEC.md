@@ -166,18 +166,44 @@ worth as much as accuracy.
 
 ## 7. Curriculum
 
-Two worlds per band. Operand ranges widen with the stage; harder sub-forms gate
-in at thresholds; earlier skills persist as review.
+The progression follows **Illustrative Mathematics K–5**, unit by unit and in
+IM's own order. That choice is not cosmetic: IM builds each idea out of a
+specific representation — a collection you count however it is arranged, a number
+bond, base-ten blocks, a number line, an array, a fraction on a line — and this
+game asks its questions *through those representations* rather than around them.
+A child who plays a world and then meets the same unit in class should recognise
+the pictures.
+
+Pre-K has no IM curriculum of its own, so its two worlds are the readiness IM
+Kindergarten unit 1 assumes: counting a collection, and comparing two.
 
 | Band | World 1 | World 2 |
 | --- | --- | --- |
-| Pre-K | Count 1–10, shape matching | More/fewer, biggest/smallest |
-| Kindergarten | Ten-frames to 20, counting | ± within 5 with objects, one more/less |
-| 1st | ± within 10 → 20 (sums >10 from stage 4) | Missing addend, place value, compare 2-digit |
-| 2nd | ± within 100 (regrouping from stage 5), skip counting | Repeated addition → arrays → × |
-| 3rd | × facts (2·5·10 → 3·4 → 6·7·8·9 from stage 6) | ÷ facts, identifying fractions |
-| 4th | Multi-digit × (2×1 → 3×1 → 2×2), ÷ with remainders | Fraction compare/equivalence, decimals |
-| 5th | Fraction ± (like → unlike from stage 5) | Decimal ops, ×/÷ by 10, order of operations |
+| Pre-K | *Math in Our World* — count a collection in any arrangement, match shapes | *Numbers 1–10* — more/fewer, biggest/smallest, counting on |
+| Kindergarten | *IM K, Units 1–3* — ten-frames, numeral ↔ quantity, flat shapes | *IM K, Units 4–6* — add/subtract with objects, number bonds, numbers to 20 |
+| 1st | *IM 1, Units 1–3* — within 20, doubles, make-ten, unknowns anywhere, data | *IM 1, Units 4–6* — base ten to 99, adding within 100, length in units |
+| 2nd | *IM 2, Units 1–4* — within 100 with regrouping, the number line, measuring, data | *IM 2, Units 5–9* — numbers to 1,000, money, time, odd/even, equal groups |
+| 3rd | *IM 3, Units 1–3* — introducing multiplication, area, within 1,000 | *IM 3, Units 4–7* — division, fractions as numbers on a line, perimeter |
+| 4th | *IM 4, Units 1, 4, 6* — factors and multiples, place value, multi-digit × ÷ | *IM 4, Units 2, 3, 5, 7* — fraction equivalence, multiplicative comparison, angles |
+| 5th | *IM 5, Units 1–3* — volume, fraction multiplication and division | *IM 5, Units 4–7* — multi-digit × ÷, decimal operations, coordinate plane |
+
+The unit name and the IM citation are shown on the world card and in the map
+header, so a parent or teacher can line a world up against the classroom
+sequence. Seventy skills are in rotation across the fourteen worlds.
+
+### Variety
+
+A stage of individually-good questions still reads as a worksheet if it asks the
+same thing five times running, so variety is a budget the audit enforces:
+
+- each world draws on **6–8 skills**, and the ramp is told which skills were
+  asked recently so it can steer away from them
+- an exact repeat of a question still in the recent window is re-rolled
+- collections are drawn in a row, a grid, a scatter or a dice face, from a pool
+  of ten countable objects, because IM asks children to count the same quantity
+  arranged several ways on purpose
+- budget: the same skill back-to-back at most 15% of the time, an identical
+  question repeated within a stage at most 12%. Currently ~5% and ~3%.
 
 ### Distractors
 
@@ -203,17 +229,30 @@ correct answer's position uniformly distributed within each choice count.
 
 ## 8. Accessibility, and children who cannot read yet
 
-The youngest players are the primary users, and they cannot read. Rules:
+The youngest players are the primary users, and they cannot read.
 
-**No question may hinge on decoding a word.**
+**Below 2nd grade, no question contains a letter.** Not "keep the words simple" —
+none at all, in the prompt or on any answer button. Pre-K, Kindergarten and 1st
+grade are asked entirely through a picture, a drawn icon chip and mathematical
+symbols:
 
-- Sequence questions use a **number track with a gap** — `4 5 6 ?` — never the
+- Counting is a collection and a `?`. The answers are numerals.
+- The converse — numeral in, quantity out — is a numeral card, `= ?`, and answer
+  buttons that are **drawn groups of dots** rather than words.
+- Shape matching is drawn as `[shape] = [?]`, so the question needs no prompt.
+- Sequence questions use a **number track with a gap** — `4 5 ? 7` — never the
   words "before" and "after". Those two words look identical to a pre-reader but
   produce opposite answers.
-- Comparison questions carry a drawn **up/down arrow chip**. Pre-K asks one
-  direction only, so the convention is learned before it is varied; Kindergarten
-  introduces the opposite with the icon already familiar.
-- Answer choices are numerals or drawn shapes, never words a child must read.
+- Comparison carries a drawn **up/down arrow chip** and no prompt at all. Pre-K
+  asks one direction only, so the convention is learned before it is varied.
+- Place value is **base-ten blocks**, in both directions: blocks → numeral, and
+  numeral → blocks as drawn answer buttons.
+- Addition, subtraction and unknown-position equations are written in symbols
+  (`8 = 3 + ?`), which are not words.
+
+Hints and explanations are still written in English. They are for the adult
+sitting alongside, and nothing in the game requires reading one: a second miss
+reveals the answer and tapping it continues.
 
 **Every control is a drawn icon, not an emoji.** Emoji coverage varies by device
 and font; a control that renders as an empty box is unrecoverable for a
@@ -221,11 +260,13 @@ five-year-old.
 
 **Visual supports are age-matched.** Ten-frames are a Kindergarten counting tool
 and are not used above it — past that they are clutter that obscures the strategy
-being taught. Number lines are framed to the numbers actually in play, never a
-fixed 0–20.
+being taught, so 1st grade's make-ten is shown as two hops on a number line
+instead. Number lines are framed to the numbers actually in play and label only
+as many ticks as fit.
 
-**The audit enforces these.** A Pre-K or K prompt with a direction word and no
-icon, before/after wording, or a ten-frame above Kindergarten fails the build.
+**The audit enforces all of it.** A letter in any band-0-to-2 prompt or visible
+answer, a ten-frame above Kindergarten, or a visual spec `fx.js` could not draw
+fails the build.
 
 Also: minimum 48px touch targets, `aria-live` feedback, real focusable buttons,
 screen-reader labels on icon controls, and `prefers-reduced-motion` respected.

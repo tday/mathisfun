@@ -214,6 +214,15 @@ body {
   background: #fff;
   letter-spacing: 0.02em;
 }
+/* Picture answers for pre-readers: sized against the button, not in pixels, so
+   they fill a stacked full-width button on a phone and a narrow column on a
+   desktop equally well. */
+.answers .btn canvas.qchoice {
+  display: block;
+  height: clamp(42px, 9vh, 76px);
+  width: auto;
+  max-width: 100%;
+}
 .answers .btn.choice-0 { background: #d9f2ff; }
 .answers .btn.choice-1 { background: #ffe6f2; }
 .answers .btn.choice-2 { background: #e6ffe9; }
@@ -490,7 +499,8 @@ body {
 .world-card canvas { border-radius: 12px; border: 3px solid var(--ink); flex: 0 0 auto; }
 .wc-body { min-width: 0; }
 .wc-name { font-weight: 900; font-size: 1.3rem; line-height: 1.15; }
-.wc-sub { font-size: 0.95rem; color: var(--ink-soft); font-weight: 700; }
+.wc-unit { font-size: 1rem; color: var(--ink); font-weight: 800; line-height: 1.2; }
+.wc-sub { font-size: 0.85rem; color: var(--ink-soft); font-weight: 700; }
 .wc-stars { font-weight: 900; color: #b45f09; font-size: 1.05rem; margin-top: 3px; }
 
 /* ------------------------------------------------------- landscape adjustments */
