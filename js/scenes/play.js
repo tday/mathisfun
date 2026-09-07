@@ -10,7 +10,7 @@
 
 import { drawUnit } from '../gfx/sprite.js';
 import { palette } from '../gfx/palettes.js';
-import { Particles, drawSkyDecor, drawGround, outlinedText, FONT } from '../gfx/fx.js';
+import { Particles, drawSkyDecor, drawGround, outlinedText, fitFont, FONT } from '../gfx/fx.js';
 import { INK, roundRectPath, ink } from '../gfx/toybox.js';
 import { withAlpha, clamp, mulberry32, hash, plural } from '../core/utils.js';
 import { overlay, panel, clear, announce } from '../ui/dom.js';
@@ -29,7 +29,7 @@ export function createPlay() {
   let hearts, maxHearts, shields, coinsEarned, streak, bestStreak;
   let time, questionIndex, missStreak, easeLevel, assisted, correctCount, attempts;
   let recentSkills, recentPrompts;
-  let over, outcome, waveShown, castleHit, heroCast, heroCheer, blinkT;
+  let over, outcome, overMsg, waveShown, castleHit, heroCast, heroCheer, blinkT;
   let hud, qpanel, backdrop, backdropKey, view;
   let currentQuestion, tries, resolving;
 
@@ -236,6 +236,10 @@ export function createPlay() {
     if (over) return;
     over = true;
     outcome = won;
+    // Picked once, here. render() used to call say.stageWin() itself, which
+    // draws a *different* line from the pool on every frame — sixty flickering
+    // congratulations a second instead of one a child can read.
+    overMsg = won ? say.stageWin() : 'Good try!';
     qpanel.lock();
     const stars = starsFor({
       won,
@@ -365,6 +369,7 @@ export function createPlay() {
       attempts = 0;
       over = false;
       outcome = null;
+      overMsg = '';
       waveShown = 0;
       castleHit = 0;
       heroCast = 0;
@@ -563,8 +568,8 @@ export function createPlay() {
         ctx.fillStyle = withAlpha('#2b1b38', 0.35);
         ctx.fillRect(0, 0, v.w, v.h);
         ctx.textAlign = 'center';
-        const msg = outcome ? say.stageWin() : 'Good try!';
-        outlinedText(ctx, msg, v.w / 2, v.h * 0.42, `900 ${Math.min(v.w * 0.1, 54)}px ${FONT}`,
+        const size = fitFont(ctx, overMsg, v.w - 32, Math.min(v.w * 0.1, 54));
+        outlinedText(ctx, overMsg, v.w / 2, v.h * 0.42, `900 ${size}px ${FONT}`,
           outcome ? '#ffd34e' : '#ffb347', 8);
         ctx.restore();
       }
@@ -574,7 +579,7 @@ export function createPlay() {
     debugState() {
       return {
         world: world.id, stage, hearts, maxHearts, coinsEarned, enemies: enemies.length,
-        spawnsLeft: plan.spawns.length - spawnIdx, over, outcome, correctCount, attempts,
+        spawnsLeft: plan.spawns.length - spawnIdx, over, outcome, overMsg, correctCount, attempts,
         band: world.band,
         boss: enemies.some((e) => e.boss && e.alive),
         bossHp: enemies.find((e) => e.boss)?.hp ?? null,

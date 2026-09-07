@@ -104,8 +104,57 @@ async function main() {
     }
     await page.waitForTimeout(180);
   }
+  // The celebration has to hold still long enough to read. render() used to
+  // call the rotating copy picker itself, so the banner drew a different
+  // congratulation on every frame — sixty a second, which is not a word, it is
+  // a flicker. Same for the headline on the results card behind it.
+  // Read what is actually painted, not just the state behind it: the width and
+  // pixel count of the gold fill on the scanline through the middle of the
+  // banner. A different word is a different signature. Confetti is the same
+  // gold and drifts across that line, so the test asks for a clear majority
+  // rather than six identical samples.
+  const bannerSig = () => page.evaluate(async () => {
+    // Two frames, so every sample is a picture the game has just painted rather
+    // than whatever was left in the backing store since the last read.
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const c = document.getElementById('game');
+    const row = c.getContext('2d').getImageData(0, Math.round(c.height * 0.42), c.width, 1).data;
+    let first = -1; let last = -1; let n = 0;
+    for (let x = 0; x < c.width; x++) {
+      const i = x * 4;
+      if (Math.abs(row[i] - 255) < 26 && Math.abs(row[i + 1] - 211) < 26 && Math.abs(row[i + 2] - 78) < 40) {
+        if (first < 0) first = x;
+        last = x;
+        n++;
+      }
+    }
+    return `${first}:${last}:${n}`;
+  });
+  const banner = [];
+  const sigs = [];
+  for (let i = 0; i < 6; i++) {
+    banner.push(await page.evaluate(() => window.__mmd.state()?.overMsg));
+    sigs.push(await bannerSig());
+  }
+  const shown = banner.filter(Boolean);
+  check('the win banner holds one line', shown.length >= 3 && new Set(shown).size === 1,
+    shown.length ? [...new Set(shown)].join(' / ') : 'never saw the banner');
+  const tally = {};
+  for (const sig of sigs) tally[sig] = (tally[sig] || 0) + 1;
+  check('the win banner is painted as one line', Math.max(...Object.values(tally)) >= 5,
+    `${shown[0] || '?'} — ${sigs.join(' ')}`);
+
   await page.waitForTimeout(2200);
   check('stage reaches results', (await page.evaluate(() => window.__mmd.scene())) === 'results');
+
+  const headlines = [];
+  for (let i = 0; i < 8; i++) {
+    headlines.push(await page.locator('.results-text .qprompt').first().innerText().catch(() => null));
+    await page.waitForTimeout(70);
+  }
+  const said = headlines.filter(Boolean);
+  check('the results headline holds one line', said.length >= 3 && new Set(said).size === 1,
+    said.length ? [...new Set(said)].join(' / ') : 'never saw the headline');
   const saved = await page.evaluate(() => window.__mmd.save());
   check('stars recorded', (saved.stars.g2w0?.[0] || 0) >= 1, `stars=${saved.stars.g2w0?.[0]}`);
   check('coins earned and kept', saved.coins > 0, `coins=${saved.coins}`);

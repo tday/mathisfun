@@ -750,31 +750,55 @@ const VISUALS = {
   },
 
   /**
-   * A picture graph. One row can be ringed, so "how many in this category" can
-   * be asked without naming the category in words.
+   * A picture graph. One row is the question, and three things say so at once:
+   * it is the only row at full strength, it sits on a banded card, and it ends
+   * in the same "?" chip every other visual uses for "this is the bit you are
+   * answering".
+   *
+   * All three are needed. The pale band that used to be the only cue vanished
+   * behind a row of yellow stars, and a child looking at three rows of things
+   * and three numbers had no reason to prefer one row over another — count the
+   * fish, count the lot, count the rows, all equally reasonable.
    */
   pictureGraph(ctx, spec, bank, w, h) {
     const rows = spec.rows;
     const maxN = Math.max(...rows.map((r) => r.count), 1);
     const axis = 6;
+    const asked = rows.some((r) => r.mark);
+    // The "?" gets a column of its own, in a fixed place past the longest row,
+    // so where it sits never gives the count away.
+    const cols = maxN + (asked ? 1 : 0);
     // Size the cell from both directions so the graph fills the card instead of
     // sitting as a stamp in the top-left of it.
-    const cell = Math.min((h - 4) / rows.length, (w - axis - 12) / maxN);
+    const cell = Math.min((h - 6) / rows.length, (w - axis - 12) / cols);
     const rowH = cell;
-    const gw = axis + maxN * cell;
+    const gw = axis + cols * cell;
     const x0 = (w - gw) / 2;
     const y0 = (h - rowH * rows.length) / 2;
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
 
     rows.forEach((row, i) => {
       const y = y0 + i * rowH;
       if (row.mark) {
-        roundRectPath(ctx, x0, y + 1, axis + row.count * cell, rowH - 2, Math.min(10, rowH * 0.3));
-        ctx.fillStyle = 'rgba(255,233,168,0.95)';
-        ctx.fill();
-        ink(ctx, 3);
+        // Full width, not the length of the row. A band that stopped where the
+        // pictures stopped read as a bar — and the length of a bar is the
+        // answer, which is the one thing it must not hand over.
+        card(ctx, x0, y + 1, gw, rowH - 2, '#ffffff');
       }
+      ctx.save();
+      // Everything that is not the question falls back to being context.
+      if (asked && !row.mark) ctx.globalAlpha = 0.38;
       for (let k = 0; k < row.count; k++) {
         drawCountable(ctx, bank, row.sprite, x0 + axis + k * cell + cell / 2, y + rowH / 2, cell * 0.9);
+      }
+      ctx.restore();
+      if (row.mark) {
+        const chip = rowH * 0.72;
+        const cx = x0 + axis + maxN * cell + cell / 2;
+        card(ctx, cx - chip / 2, y + rowH / 2 - chip / 2, chip, chip, '#ffe9a8');
+        outlinedText(ctx, '?', cx, y + rowH / 2, `900 ${chip * 0.62}px ${FONT}`, '#b45f09', 0, null);
       }
     });
 

@@ -269,6 +269,23 @@ labels, crisp text at any DPR and native touch sizing all came free. The usual
 objection (syncing DOM to world coordinates) never applied, because everything in
 the overlay is screen-anchored.
 
+**Never pick a random thing inside `render`.** The end-of-stage banner called
+the rotating copy picker where it drew the text, so it congratulated the child
+with a different line on every frame — sixty a second, which is not a word, it
+is a flicker. Anything chosen from a pool belongs where the *event* happens, not
+where the pixels do. The test that guards it reads the painted scanline rather
+than the state behind it, because the state was never what was wrong.
+
+**A wordless question needs the ask marked, not just the subject.** The picture
+graph highlighted the row being asked about with a pale band, which promptly
+disappeared behind a row of yellow stars. A child then saw three rows of things
+and three numbers and no reason to prefer one row over another — count the fish,
+count the lot, count the rows, all equally reasonable. It took three cues
+together: the asked row at full strength, everything else faded back to context,
+and the same "?" chip the rest of the game uses for "this is the bit you answer".
+The "?" is the one that does the work, because by then it is a symbol the child
+has already been taught by every other visual.
+
 **A `?debug=1` hook is worth writing early.** `window.__mmd.state()` /
 `.question()` is what lets tests *play the game* rather than pattern-match
 pixels. It made the difference between smoke tests and real coverage.

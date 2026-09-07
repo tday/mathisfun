@@ -650,7 +650,7 @@ export const EARLY = {
       answerValue: answer,
       min: 1,
       distractors: [...counts.filter((c) => c !== answer), ...countSlips(rng, answer, 1)],
-      hint: 'Count along the row that is lit up.',
+      hint: 'Count along the row in the box, next to the ?.',
       explain: `That row has ${answer}.`,
     };
   },
