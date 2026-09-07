@@ -53,12 +53,23 @@ export class Hud {
 
   setHearts(current, max) {
     if (this._hearts === `${current}/${max}`) return;
+    const before = Number((this._hearts || '').split('/')[0]);
     this._hearts = `${current}/${max}`;
     clear(this.heartsEl);
     for (let i = 0; i < max; i++) {
       this.heartsEl.append(spriteImg(this.game.sprites.prop('heart', 26, { empty: i >= current }), 26));
     }
     this.heartsEl.setAttribute('aria-label', `${current} of ${max} hearts left`);
+
+    // Losing a life used to be a silent swap of one sprite for another, in the
+    // corner, while a monster was exploding in the middle of the screen. Shake
+    // the row so the child actually notices it happened.
+    if (Number.isFinite(before) && current < before) {
+      this.heartsEl.classList.remove('lost');
+      // Force a reflow so the animation restarts on consecutive losses.
+      void this.heartsEl.offsetWidth;
+      this.heartsEl.classList.add('lost');
+    }
   }
 
   setShields(n) {

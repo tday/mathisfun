@@ -190,14 +190,20 @@ async function qaOneQuestion(page, world, stage, n) {
   // The panel is locked until the next question loads ~780ms later; clicking
   // during that window is swallowed, so wait for the question to actually turn
   // over rather than guessing at a delay.
+  // The visual has to be part of the signature. Two wordless questions can
+  // share a prompt ("") and a choice list ("5,1") and still be different
+  // questions — which read as "the game froze" without it.
+  const stamp = (x) => `${x.skill}|${x.prompt}|${(x.choices || []).join(',')}|${JSON.stringify(x.visual)}`;
   const advanced = await page.waitForFunction(
     (was) => {
       const st = window.__mmd.state();
       if (!st || st.over) return true;
       const now = window.__mmd.question();
-      return now && `${now.prompt}|${now.choices.join(',')}` !== was;
+      if (!now) return false;
+      const s = `${now.skill}|${now.prompt}|${(now.choices || []).join(',')}|${JSON.stringify(now.visual)}`;
+      return s !== was;
     },
-    `${q.prompt}|${q.choices.join(',')}`,
+    stamp({ ...q, choices: q.choices }),
     { timeout: 4000 },
   ).catch(() => null);
   if (!advanced) {

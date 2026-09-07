@@ -182,7 +182,10 @@ for (const world of WORLDS) {
     const seen = new Set();
     let prev = null;
     for (let i = 0; i < PER_SESSION; i++) {
-      const sig = (q) => `${q.prompt}|${JSON.stringify(q.visual)}`;
+      // Same signature play.js uses, sprite-blind: which countable got drawn is
+      // not what makes two questions feel different to a child.
+      const sig = (q) => `${q.skill}|${q.prompt}|${q.choices.map((c) => c.text).join(',')}|`
+        + JSON.stringify(q.visual, (k, v) => (k === 'sprite' ? undefined : v));
       let q = null;
       for (let a = 0; a < 6; a++) {
         q = makeQuestion(world, stage, {

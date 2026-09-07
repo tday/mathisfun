@@ -172,8 +172,32 @@ every declared visual paints something, every answer button is drawn and at leas
 48px, the right answer is accepted and the game moves on, a wrong one keeps every
 heart and offers a hint, and **no letter reaches the screen below 2nd grade**.
 
-Four helpers render images for a human to judge, since neither suite can tell
-you a picture is unreadable:
+### 4. Chaos testing
+
+```bash
+node tools/e2e/chaos.mjs             # SEED=7 ROUNDS=3 PERSONA=masher to vary
+```
+
+The suites above drive the game the way it is meant to be driven. No four-year-old
+does that. This one plays badly on purpose, as six personas — a toddler mashing
+the screen with two fingers, a guesser who always taps the first answer, a
+struggler who gets everything wrong twice, a wanderer who opens and closes every
+dialog, a quitter who bails out mid-stage, a dawdler who lets the monsters
+through — interleaved with reloads, rotations, backgrounding, and scene switches
+faster than the cross-fade can finish.
+
+After *every* action it asserts what must be true regardless of what was tapped:
+hearts, coins, tokens and stars inside their legal range; the save still
+parseable; no `NaN` or `undefined` on screen; no two live controls overlapping;
+no text clipped by its own box; nothing past the edge of the viewport; and
+always at least one thing left to tap, because a screen with no live control is
+a dead end a child cannot escape without an adult. Everything random is seeded,
+so a failure reproduces with the same `SEED`.
+
+### Review helpers
+
+Five helpers render images for a human to judge, since none of the suites can
+tell you a picture is unreadable:
 
 ```bash
 node tools/e2e/visual-check.mjs      # every question visual at card size

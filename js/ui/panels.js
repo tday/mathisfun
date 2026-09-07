@@ -33,8 +33,18 @@ export function openShop(game, { inStage = false, canRefill = true, onBuy, onClo
         el('div', { class: 'desc' }, desc),
       );
       card.append(button(
-        canBuy ? `${price} 🪙` : '✓ Maxed',
-        { cls: canBuy && save.data.coins >= price ? 'primary' : '', audio: game.audio, disabled: !canBuy || save.data.coins < price },
+        // A drawn coin, not the coin emoji: U+1FA99 is recent enough to render
+        // as an empty box on plenty of devices, and this file's own button
+        // helper exists precisely so that cannot happen.
+        canBuy ? String(price) : 'Maxed',
+        {
+          cls: canBuy && save.data.coins >= price ? 'primary' : '',
+          audio: game.audio,
+          icon: canBuy ? 'coin' : undefined,
+          game,
+          ariaLabel: canBuy ? `Buy ${name} for ${plural(price, 'coin')}` : `${name} is already maxed out`,
+          disabled: !canBuy || save.data.coins < price,
+        },
         () => {
           if (!save.spendCoins(price)) return;
           buy();

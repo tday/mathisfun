@@ -70,7 +70,11 @@ export function createPlay() {
    * and an exact repeat of anything still in the window is re-rolled.
    */
   function nextQuestion() {
-    const sig = (q) => `${q.prompt}|${JSON.stringify(q.visual)}`;
+    // Signature ignores which countable was drawn. "Which has more, 5 or 1?"
+    // with apples and then again with fish is the same question to a child, and
+    // comparing the raw visual let the second one straight through.
+    const sig = (q) => `${q.skill}|${q.prompt}|${q.choices.map((c) => c.text).join(',')}|`
+      + JSON.stringify(q.visual, (k, v) => (k === 'sprite' ? undefined : v));
     let q = null;
     for (let attempt = 0; attempt < 6; attempt++) {
       q = makeQuestion(world, stage, {

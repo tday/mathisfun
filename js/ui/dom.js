@@ -72,6 +72,11 @@ export function spriteImg(sprite, size, alt = '') {
   return c;
 }
 
+// How many modals are open. The game can open one from inside another (buy a
+// heart from the pause sheet), so the app behind them is only woken back up
+// when the last one closes.
+let modalDepth = 0;
+
 /** Full-screen modal sheet. Returns a close() function. */
 export function showModal(contentNode, { onClose, dismissable = true } = {}) {
   const host = modalHost();
@@ -80,7 +85,25 @@ export function showModal(contentNode, { onClose, dismissable = true } = {}) {
   const sheet = el('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true' }, contentNode);
   host.append(sheet);
 
+  // The dialog covers the game, but covering it is not the same as switching it
+  // off: the answer buttons underneath stay focusable and stay in the screen
+  // reader's list, so tabbing walks straight into questions nobody can see.
+  const app = document.getElementById('app');
+  if (app && modalDepth === 0) {
+    app.inert = true;
+    app.setAttribute('aria-hidden', 'true');
+  }
+  modalDepth++;
+
+  let closed = false;
   const close = () => {
+    if (closed) return;
+    closed = true;
+    modalDepth = Math.max(0, modalDepth - 1);
+    if (app && modalDepth === 0) {
+      app.inert = false;
+      app.removeAttribute('aria-hidden');
+    }
     host.hidden = true;
     clear(host);
     document.removeEventListener('keydown', onKey);

@@ -262,7 +262,8 @@ Two suites, deliberately independent:
 | --- | --- | --- |
 | `tools/audit-questions.mjs` | Plain Node | Everything about the maths: 16,800 questions, one correct choice each, plausible distractors, no negatives or zero denominators, answer position unbiased, no letters below 2nd grade, no ten-frames above K, every visual spec drawable, and the variety budget |
 | `tools/e2e/run.mjs` | Playwright | Everything about the app: console errors, every scene, a full stage played to results, audio *level*, touch targets, zoom lock, save recovery, offline |
-| `tools/e2e/qa-questions.mjs` | Playwright | Everything about how a question *presents*: ~670 questions played through the real UI across all 14 worlds — visuals actually paint, answer buttons are drawn and tappable, correct answers are accepted, wrong ones stay gentle, and no letter reaches a pre-reader's screen |
+| `tools/e2e/qa-questions.mjs` | Playwright | Everything about how a question *presents*: every stage of every world played through the real UI — visuals paint, answer buttons are drawn, tappable and not clipped, correct answers are accepted, wrong ones stay gentle, and no letter reaches a pre-reader's screen |
+| `tools/e2e/chaos.mjs` | Playwright | Everything about what a child does *to* the game: six misbehaving personas plus reloads, rotations and scene storms, with the invariants re-checked after every single action |
 
 **The audit's second opinion.** A generator decides both the question and its
 answer, so a buggy generator produces something internally consistent and

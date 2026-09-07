@@ -196,6 +196,62 @@ and a design nicety second.
 
 ---
 
+## Play it badly on purpose
+
+Every suite I had drove the game correctly: read the question, tap the right
+answer, move on. A four-year-old does none of that, so `tools/e2e/chaos.mjs`
+plays badly on purpose — six personas (masher, guesser, struggler, wanderer,
+quitter, dawdler) interleaved with reloads, rotations and scene switches faster
+than the cross-fade — and re-checks the invariants after every single action.
+
+The interesting part was not the personas. It was writing down what has to be
+true *regardless of what was tapped*, because that is the thing worth asserting
+when you cannot predict the input:
+
+- hearts, coins, tokens and stars inside their legal range
+- the save still parseable
+- no `NaN` or `undefined` on screen
+- **no two live controls overlapping** — one of them cannot be tapped and the
+  child has no way to know which
+- **no text clipped by its own box**, and nothing past the edge of the viewport
+- **always at least one thing left to tap** — a screen with no live control is a
+  dead end a child cannot escape without an adult reloading the page
+
+The overlap check fired immediately, on dialog buttons sitting over the answer
+buttons behind them. My first instinct was "false positive, the modal covers
+them" — and covering is exactly the point. The dialog was painted over the game
+but the game underneath was still *live*: its buttons stayed focusable and
+stayed in the screen reader's list, so tabbing walked straight into questions
+nobody could see. `#app` is now `inert` while a modal is open, and the check
+skips inert subtrees, which makes it correct rather than merely quiet.
+
+The same run found the shop pricing its buttons with a `🪙` emoji — in a file
+whose own button helper carries the comment "a drawn icon always renders; an
+emoji may not, and a child cannot recover from a control that shows up as an
+empty box". **A rule only holds where it is enforced**; that one was written down
+three lines above the code that broke it.
+
+---
+
+## The instruction a child cannot read
+
+Miss twice and the answer is revealed, and you tap it to carry on. That
+instruction lived in the feedback line: "The answer is 4. Tap it to keep going."
+English — at the one moment a stuck pre-reader most needs telling what to do.
+
+The fix is a gold ring that pulses outward from the revealed button. It says
+"touch this" in no language at all, and it works with motion turned down too,
+where it simply sits there. First attempt made the ring green, matching the
+button; against a green button that is not a signal, it is a slightly thicker
+border.
+
+Related, from the same pass: losing a heart was a silent swap of one sprite for
+another, in a corner, while a monster exploded in the middle of the screen. The
+row now shakes. **If something bad happens, the game has to say so somewhere the
+child is already looking.**
+
+---
+
 ## Small things that turned out to matter
 
 **Derive state you could store.** Unlock flags do not exist; `isStageUnlocked`
