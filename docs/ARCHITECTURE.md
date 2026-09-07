@@ -106,7 +106,12 @@ everything in the overlay is screen-anchored. Anything world-anchored (floating
 coins, HP pips) stays on the canvas.
 
 `core/screen.js` caps device pixel ratio at 2 and re-applies context state after
-every resize.
+every resize. It also watches the canvas with a `ResizeObserver`, because the
+canvas box changes without any window event: `#stage` is a flex sibling of
+`#panel`, so a scene swapping its controls resizes the canvas underneath it. The
+two sizes a canvas has — the box CSS gives it and the space the game draws
+into — must stay equal, or the browser stretches the picture and taps land where
+the art used to be.
 
 ---
 
@@ -264,6 +269,7 @@ Two suites, deliberately independent:
 | `tools/e2e/run.mjs` | Playwright | Everything about the app: console errors, every scene, a full stage played to results, audio *level*, touch targets, zoom lock, save recovery, offline |
 | `tools/e2e/qa-questions.mjs` | Playwright | Everything about how a question *presents*: every stage of every world played through the real UI — visuals paint, answer buttons are drawn, tappable and not clipped, correct answers are accepted, wrong ones stay gentle, and no letter reaches a pre-reader's screen |
 | `tools/e2e/chaos.mjs` | Playwright | Everything about what a child does *to* the game: six misbehaving personas plus reloads, rotations and scene storms, with the invariants re-checked after every single action |
+| `tools/e2e/map-taps.mjs` | Playwright | Everything about aiming at a level: the map's stage nodes are painted on the canvas, so it taps them — every world at five screen sizes — and checks the drawn art is tappable, that no tap ever selects a non-nearest stage, that hit zones never share ground or fall below a fingertip, that nothing in the DOM covers a node, and that the canvas is the size the game draws into |
 
 **The audit's second opinion.** A generator decides both the question and its
 answer, so a buggy generator produces something internally consistent and

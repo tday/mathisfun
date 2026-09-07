@@ -299,6 +299,48 @@ not something a five-year-old can undo.
 
 ---
 
+## The size the game thinks it is
+
+A canvas has two sizes — the box CSS gives it, and the coordinate space the game
+draws into — and for a long time those were not the same number.
+
+`Screen` measured the box on window resize. But `#stage` is a flex sibling of
+`#panel`, so a scene swapping its controls resizes the canvas underneath it with
+no window event at all. The game kept drawing into the space measured at boot,
+the browser stretched that bitmap into the smaller box, and pointer events —
+which arrive in the element's own pixels — landed where the art *used* to be. On
+a 320x568 phone the play scene was drawing a 568px-tall battlefield into 106px
+of screen. On the map, the whole bottom row of stages sat under the panel and
+could not be tapped at all.
+
+None of it looked broken. The art is round and cartoonish, so an 18% vertical
+squash reads as a style choice, and a screenshot cannot tell you that the circle
+you are looking at is not where the tap goes. Finding it took measuring the two
+numbers and comparing them — `screen.w/h` against the canvas's own bounding box,
+in every scene. That check is one line, it now runs at five screen sizes, and it
+is the kind of assertion worth reaching for whenever a value is derived once and
+assumed to stay true.
+
+A `ResizeObserver` on the canvas fixes it for good, and the engine measures on
+scene swap so the first frame of a new scene is right rather than one frame late.
+
+**"First match" is not "nearest."** The map's hit test walked the stage nodes in
+order and took the first within 1.5 radii. The nodes sit about 2.5 radii apart,
+so those zones overlapped — and first-in-stage-order meant every gap went to the
+lower-numbered stage. Tapping beside stage 3 selected stage 2, which is not a
+near miss, it is the wrong level. One word of difference in the code.
+
+**Size the thing from the room that is left, not from the screen.** The node
+radius was computed from the viewport while the spacing came from margins that
+ignored it, and the position jitter was a fraction of the whole map. On a
+landscape phone that drew 77px circles 39px apart, stacked on top of each other.
+Solving radius and spacing together, and bounding the jitter by the slack that is
+genuinely left over, makes overlap impossible instead of unlikely — and lets the
+grid shape be chosen for the biggest node rather than hard-coded per
+orientation.
+
+---
+
 ## Deployment
 
 **GitHub Pages project sites are served from a subpath** (`/mathisfun/`), not the

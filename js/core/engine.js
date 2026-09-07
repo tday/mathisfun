@@ -60,6 +60,10 @@ export class Engine {
     this.current = this.scenes.get(name);
     this.currentName = name;
     this.current.enter?.(params, this.game);
+    // enter() usually rebuilds the controls in #panel, which resizes the canvas
+    // under it. Measuring here means the first frame of the new scene is drawn
+    // at the right size instead of one frame late.
+    this.screen.resize();
     this.current.onLayout?.(this.screen.w, this.screen.h);
   }
 

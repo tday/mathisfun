@@ -194,6 +194,22 @@ always at least one thing left to tap, because a screen with no live control is
 a dead end a child cannot escape without an adult. Everything random is seeded,
 so a failure reproduces with the same `SEED`.
 
+### 5. Map tap targets
+
+```bash
+node tools/e2e/map-taps.mjs          # VIEWS=phone WORLDS=g0w0 to narrow it
+```
+
+The stage nodes on the world map are painted on the canvas, so nothing in the DOM
+says where they are — the only way to know a child's tap lands on the level they
+aimed at is to aim at one and read back which stage got selected. This taps every
+world at five screen sizes and asserts that the drawn art is tappable everywhere
+inside it, that **no tap ever selects a stage that is not the nearest one**, that
+two hit zones never share ground or fall below a fingertip across, that nothing
+in the DOM sits on top of a node, and that the canvas is exactly the size the
+game draws into — because when those two drift the picture is stretched and every
+tap lands where the art used to be.
+
 ### Review helpers
 
 Five helpers render images for a human to judge, since none of the suites can

@@ -21,6 +21,16 @@ export class Screen {
     window.addEventListener('orientationchange', () => setTimeout(onResize, 120));
     if (window.visualViewport) window.visualViewport.addEventListener('resize', onResize);
 
+    // The canvas box also changes with no window event at all: a scene swaps
+    // the controls in #panel, the flex column gives the stage less room, and
+    // the canvas silently gets shorter. Without this the backing store keeps
+    // the old size, the browser stretches the old picture into the new box,
+    // and every tap lands where the art *used* to be — by up to half a screen.
+    if (window.ResizeObserver) {
+      this._ro = new ResizeObserver(() => this.resize());
+      this._ro.observe(canvas);
+    }
+
     for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) {
       canvas.addEventListener(type, (e) => this._emit(type, e), { passive: type === 'pointermove' });
     }

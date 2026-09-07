@@ -18,26 +18,89 @@ export function createMap() {
   let game, world, pal, nodes, trail, decor, grid, selected, t, particles, view, hero;
   let playBtn, titleEl, bar;
 
+  const PLATE_H = 40; // the world name plate drawn across the top of the map
+  // Ways to arrange ten stages. layout() picks whichever gives the biggest node
+  // on the screen in front of it, so a landscape phone gets a long low grid and
+  // a tall one gets a narrow deep grid without either being hard-coded.
+  const SPLITS = [2, 3, 4, 5, 10];
+
+  /**
+   * The plate only repeats the world name that is already printed in the panel
+   * below, so on a short canvas it is the first thing to go: it was costing a
+   * fifth of the map's height and sitting on top of the boss node.
+   */
+  function plateVisible(h) {
+    return h >= 420;
+  }
+
+  /** Height of the chrome above the nodes: the HUD, and the plate if it shows. */
+  function headerH(h) {
+    // Measured, not guessed. The HUD wraps to a second row on a narrow phone,
+    // and a fixed fraction of the screen buried the boss node behind it.
+    const hud = (bar?.offsetHeight || 44) + 14;
+    return plateVisible(h) ? hud + PLATE_H + 14 : hud + 10;
+  }
+
+  /**
+   * The largest node radius a cols x rows grid can hold on this canvas.
+   *
+   * Nodes need 2.6 radii between centres to leave grass between them; the top
+   * row also needs 1.75 radii of sky for the boss castle that rears up over it,
+   * and the bottom row 1.9 for the star row that hangs beneath. Solving those
+   * together rather than iterating avoids the fixed point bouncing between a
+   * radius that is too big for the margins it implies and one that is too
+   * small — which it did, landing on whichever it happened to stop at.
+   */
+  function radiusFor(w, h, cols, rows, padX) {
+    const stepX = cols > 1 ? (w - padX * 2) / (cols - 1) : w - padX * 2;
+    const room = Math.max(1, h - headerH(h));
+    return Math.min(stepX / 2.6, room / (2.6 * (rows - 1) + 3.65));
+  }
+
   /**
    * Node positions adapt to the screen shape. A single free-form spline looked
    * good on a laptop but bunched stages on top of each other on a tall phone,
    * so the nodes sit on a serpentine grid sized to the viewport and the trail
    * is a spline drawn *through* them — even spacing, and the path can never
    * miss a node.
+   *
+   * Everything here is sized from the room the screen actually left, not from
+   * the screen: a node has to be a circle a child can see and press, and two of
+   * them must never touch, on a 247px-tall landscape phone as much as on a
+   * laptop.
    */
   function layout(w, h) {
     const rng = mulberry32(world.mapSeed);
     const portrait = h > w * 1.15;
-    const cols = portrait ? 3 : 5;
-    const rows = Math.ceil(STAGES_PER_WORLD / cols);
-
     const padX = w * (portrait ? 0.17 : 0.1);
-    // Top margin clears the HUD and the world name plate; the bottom margin has
-    // to fit the star row that hangs under each node.
-    const padTop = Math.max(h * 0.24, 132);
-    const padBot = Math.max(h * 0.16, 76);
+
+    let cols = SPLITS[0];
+    let rows = Math.ceil(STAGES_PER_WORLD / cols);
+    let r = 0;
+    for (const c of SPLITS) {
+      const rw = Math.ceil(STAGES_PER_WORLD / c);
+      const cand = radiusFor(w, h, c, rw, padX);
+      // SPLITS runs narrowest first and a candidate has to win by half a pixel,
+      // so a tie keeps the deeper grid — the trail snakes instead of stretching
+      // into one straight line across the screen.
+      if (cand > r + 0.5) { r = cand; cols = c; rows = rw; }
+    }
+    r = clamp(r, 14, 44);
+
     const usableW = Math.max(1, w - padX * 2);
+    const stepX = cols > 1 ? usableW / (cols - 1) : usableW;
+    const padTop = headerH(h) + r * 1.75;
+    const padBot = r * 1.9;
     const usableH = Math.max(1, h - padTop - padBot);
+    const stepY = rows > 1 ? usableH / (rows - 1) : usableH;
+
+    // Jitter is only ever the slack left after the circles are placed. Any more
+    // and two stages touch, and then there is no honest way to say which one a
+    // tap belongs to. It is also capped against the radius, because on a wide
+    // screen the leftover slack is enormous and an unbounded wobble threw the
+    // bottom row clean off the canvas.
+    const jx = Math.min(Math.max(0, (stepX - r * 2.5) / 2) * 0.7, r * 0.35);
+    const jy = Math.min(Math.max(0, (stepY - r * 2.5) / 2) * 0.7, r * 0.15);
 
     const out = [];
     for (let i = 0; i < STAGES_PER_WORLD; i++) {
@@ -51,24 +114,33 @@ export function createMap() {
         i,
         stage: i + 1,
         // Stage 1 sits at the bottom and the boss at the top.
-        x: padX + fx * usableW + (rng() - 0.5) * usableW * 0.05,
-        y: padTop + (1 - fy) * usableH + (rng() - 0.5) * usableH * 0.03,
+        x: padX + fx * usableW + (rng() - 0.5) * 2 * jx,
+        y: padTop + (1 - fy) * usableH + (rng() - 0.5) * 2 * jy,
       });
     }
 
+    // The trail is a spline through the nodes, kept inside the box they occupy
+    // so its ends cannot overshoot up into the HUD — clamping it any tighter
+    // than that would pull the path off the nodes it is meant to join.
+    const box = {
+      top: (Math.min(...out.map((n) => n.y)) - r) / h,
+      bot: (Math.max(...out.map((n) => n.y)) + r) / h,
+    };
     const spline = makeSpline(out.map((n) => ({ x: n.x / w, y: n.y / h })), 300);
 
     const decor = [];
     const props = ['tree', 'rock', 'bush'];
-    const clearance = Math.min(w, h) * 0.15;
+    const clearance = Math.max(r * 2.2, Math.min(w, h) * 0.15);
     for (let i = 0; i < 14; i++) {
       const x = rng() * w;
       const y = (0.22 + rng() * 0.72) * h;
       if (out.some((nd) => Math.hypot(nd.x - x, nd.y - y) < clearance)) continue;
-      decor.push({ name: props[Math.floor(rng() * props.length)], x, y, size: 38 + rng() * 52 });
+      // Sized off the nodes so the scenery shrinks with them rather than
+      // towering over the stages on a short screen.
+      decor.push({ name: props[Math.floor(rng() * props.length)], x, y, size: r * (1 + rng() * 1.3) });
     }
 
-    return { nodes: out, trail: spline, decor, cols, rows };
+    return { nodes: out, trail: spline, decor, cols, rows, r, box };
   }
 
   function refreshPanel() {
@@ -165,15 +237,11 @@ export function createMap() {
 
     onPointer(type, x, y) {
       if (type !== 'pointerdown') return;
-      const r = nodeRadius();
-      for (const n of nodes) {
-        if (Math.hypot(n.x - x, n.y - y) <= r * 1.5) {
-          game.audio?.tap();
-          select(n.stage);
-          particles.ring(n.x, n.y, '#ffd34e');
-          return;
-        }
-      }
+      const hit = nodeAt(x, y);
+      if (!hit) return;
+      game.audio?.tap();
+      select(hit.stage);
+      particles.ring(hit.x, hit.y, '#ffd34e');
     },
 
     render(ctx, v) {
@@ -200,8 +268,8 @@ export function createMap() {
       ctx.lineJoin = 'round';
       for (const [lw, col] of [[r * 0.52, pal.pathEdge], [r * 0.34, pal.path]]) {
         ctx.beginPath();
-        ctx.moveTo(pts[0].x * v.w, clamp(pts[0].y, 0.16, 0.86) * v.h);
-        for (const p of pts) ctx.lineTo(p.x * v.w, clamp(p.y, 0.16, 0.86) * v.h);
+        ctx.moveTo(pts[0].x * v.w, clamp(pts[0].y, grid.box.top, grid.box.bot) * v.h);
+        for (const p of pts) ctx.lineTo(p.x * v.w, clamp(p.y, grid.box.top, grid.box.bot) * v.h);
         ctx.lineWidth = lw;
         ctx.strokeStyle = col;
         ctx.stroke();
@@ -263,29 +331,84 @@ export function createMap() {
 
       // World name plate, sat below whatever height the HUD actually took —
       // a fixed offset put it under the HUD's second row the moment the HUD
-      // wrapped.
-      const prog = worldProgress(save, world);
-      ctx.textAlign = 'center';
-      const label = `${world.name} · ${prog.stars}/${prog.max} ★`;
-      const plateW = Math.min(v.w * 0.86, 460);
-      const plateY = (bar?.offsetHeight || 44) + 14;
-      const lSize = fitFont(ctx, label, plateW - 24, Math.min(v.w * 0.045, 21));
-      roundRectPath(ctx, (v.w - plateW) / 2, plateY, plateW, 40, 20);
-      ctx.fillStyle = withAlpha('#fff8ec', 0.92);
-      ctx.fill();
-      ink(ctx, 3, INK);
-      outlinedText(ctx, label, v.w / 2, plateY + 20, `900 ${lSize}px ${FONT}`, '#3d2447', 0, null);
+      // wrapped. On a short canvas it is not drawn at all; layout() gives that
+      // height back to the stages.
+      if (plateVisible(v.h)) {
+        const prog = worldProgress(save, world);
+        ctx.textAlign = 'center';
+        const label = `${world.name} · ${prog.stars}/${prog.max} ★`;
+        const plateW = Math.min(v.w * 0.86, 460);
+        const plateY = (bar?.offsetHeight || 44) + 14;
+        const lSize = fitFont(ctx, label, plateW - 24, Math.min(v.w * 0.045, 21));
+        roundRectPath(ctx, (v.w - plateW) / 2, plateY, plateW, PLATE_H, PLATE_H / 2);
+        ctx.fillStyle = withAlpha('#fff8ec', 0.92);
+        ctx.fill();
+        ink(ctx, 3, INK);
+        outlinedText(ctx, label, v.w / 2, plateY + PLATE_H / 2, `900 ${lSize}px ${FONT}`, '#3d2447', 0, null);
+      }
     },
 
     debugState() {
-      return { world: world.id, selected, unlocked: isStageUnlocked(game.save, world, selected) };
+      return {
+        world: world.id,
+        selected,
+        unlocked: isStageUnlocked(game.save, world, selected),
+        radius: nodeRadius(),
+        plate: plateVisible(view.h),
+        nodes: nodes.map((n) => ({ stage: n.stage, x: n.x, y: n.y, target: targetOf(n) })),
+      };
     },
   };
 
+  /** The drawn radius, decided by layout() when it placed the nodes. */
   function nodeRadius() {
-    const cols = grid.cols || 5;
-    const rows = grid.rows || 2;
-    // Fit inside a grid cell so neighbouring stages can never touch.
-    return clamp(Math.min(view.w / (cols * 2.5), view.h / (rows * 3.2)), 18, 44);
+    return grid.r;
+  }
+
+  /**
+   * The circle a tap has to land in for one stage — the thing the child can
+   * actually see, not an invisible box around it.
+   *
+   * The reach is the drawn art plus a little forgiveness, a floor so a small
+   * screen still gives a thumb something to aim at, and never more than halfway
+   * to the next node — whichever of the three binds. Two targets can meet at a
+   * midpoint but never overlap, so no point on the map belongs to two stages.
+   */
+  function targetOf(n) {
+    const r = nodeRadius();
+    // The boss is a castle, not a disc: it stands taller than its node and its
+    // number sits up on the gatehouse, so its target rises to meet the art.
+    const boss = n.stage === STAGES_PER_WORLD;
+    const cx = n.x;
+    const cy = boss ? n.y - r * 0.3 : n.y;
+
+    let gap = Infinity;
+    for (const m of nodes) {
+      if (m !== n) gap = Math.min(gap, Math.hypot(m.x - cx, m.y - cy));
+    }
+    return { x: cx, y: cy, r: Math.min(Math.max(r * (boss ? 1.35 : 1.08), 24), gap / 2) };
+  }
+
+  /**
+   * Which stage a tap belongs to, or null for a tap on the grass.
+   *
+   * This used to walk the nodes in stage order and take the first one within
+   * 1.5x its drawn radius. Those circles sit about 2.5 radii apart, so the hit
+   * zones overlapped — and "first in stage order" meant the gap between two
+   * stages always went to the lower one. Tapping just left of stage 3 selected
+   * stage 2, which is not a near miss, it is the wrong level.
+   *
+   * Now the closest target wins, measured as a fraction of its own reach so the
+   * boss's larger one does not swallow its neighbours.
+   */
+  function nodeAt(x, y) {
+    let best = null;
+    let bestScore = Infinity;
+    for (const n of nodes) {
+      const t = targetOf(n);
+      const score = Math.hypot(t.x - x, t.y - y) / t.r;
+      if (score < bestScore) { bestScore = score; best = n; }
+    }
+    return bestScore <= 1 ? best : null;
   }
 }
